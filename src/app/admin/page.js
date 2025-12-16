@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useMemo, useState, useRef } from "react";
 import Swal from "sweetalert2";
-import { Html5QrcodeScanner } from "html5-qrcode";
+// import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import {
     adminLogin,
     adminGetBookings,
@@ -75,7 +76,7 @@ export default function AdminPage() {
     const [filterStatus, setFilterStatus] = useState("ALL");
     const [newDate, setNewDate] = useState("");
     const [addingDate, setAddingDate] = useState(false);
-
+    const [isFocused, setIsFocused] = useState(false);
     // Scanner
     const [cameraEnabled, setCameraEnabled] = useState(false);
     const [scanStatus, setScanStatus] = useState("idle");
@@ -139,8 +140,8 @@ export default function AdminPage() {
                 // ✅ แก้ตรงนี้: บันทึกลง localStorage
                 const token = "logged-in"; // หรือใช้ res.token ถ้ามี
                 setAuthToken(token);
-                localStorage.setItem("admin_token", token); 
-                
+                localStorage.setItem("admin_token", token);
+
                 setPasswordInput("");
                 Toast.fire({ icon: 'success', title: 'เข้าสู่ระบบสำเร็จ' });
             } else { Swal.fire("ผิดพลาด", "รหัสผ่านไม่ถูกต้อง", "error"); }
@@ -154,10 +155,10 @@ export default function AdminPage() {
     function handleLogout() {
         setAuthToken("");
         setBookings([]);
-        
+
         // ✅ แก้ตรงนี้: ลบออกจาก localStorage
         localStorage.removeItem("admin_token");
-        
+
         Toast.fire({ icon: 'success', title: 'ออกจากระบบแล้ว' });
     }
 
@@ -342,23 +343,78 @@ export default function AdminPage() {
         } else { stopScanner(); }
     }, [activeTab, scanData, cameraEnabled]);
 
+    // const startScanner = async () => {
+    //     if (!document.getElementById("reader")) return;
+    //     if (scannerRef.current) await stopScanner();
+    //     const html5QrCode = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, showTorchButtonIfSupported: true }, false);
+    //     scannerRef.current = html5QrCode;
+    //     setScanStatus("starting"); setScanErrorMsg("");
+
+    //     html5QrCode.render((decodedText) => {
+    //         handleScanSuccess(decodedText);
+    //         html5QrCode.clear();
+    //     }, (error) => { });
+    //     setScanStatus("active");
+    // };
+
     const startScanner = async () => {
         if (!document.getElementById("reader")) return;
-        if (scannerRef.current) await stopScanner();
-        const html5QrCode = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, showTorchButtonIfSupported: true }, false);
-        scannerRef.current = html5QrCode;
-        setScanStatus("starting"); setScanErrorMsg("");
 
-        html5QrCode.render((decodedText) => {
-            handleScanSuccess(decodedText);
-            html5QrCode.clear();
-        }, (error) => { });
-        setScanStatus("active");
+        // เคลียร์ของเก่าก่อนเริ่มใหม่
+        if (scannerRef.current) await stopScanner();
+
+        // 1. สร้าง Instance แบบกำหนดเอง (ไม่ใช่ Scanner UI)
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+
+        setScanStatus("starting");
+        setScanErrorMsg("");
+
+        try {
+            // 2. สั่ง Start โดยบังคับ facingMode: "environment" (กล้องหลัง)
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                },
+                (decodedText) => {
+                    // เมื่อสแกนเจอ
+                    handleScanSuccess(decodedText);
+                    // ถ้าอยากให้เจอแล้วหยุดกล้องเลย ให้เปิดบรรทัดล่างนี้
+                    // html5QrCode.stop().catch(err => console.error(err));
+                },
+                (errorMessage) => {
+                    // กรณีสแกนไม่เจอในแต่ละเฟรม (ปล่อยว่างได้)
+                }
+            );
+            setScanStatus("active");
+        } catch (err) {
+            console.error("Camera Error:", err);
+            setScanStatus("error");
+            setScanErrorMsg("ไม่สามารถเปิดกล้องหลังได้ หรือไม่มีสิทธิ์เข้าถึง");
+        }
     };
+
+    // const stopScanner = async () => {
+    //     if (scannerRef.current) {
+    //         try { await scannerRef.current.clear(); } catch (e) { }
+    //         scannerRef.current = null;
+    //         setScanStatus("idle");
+    //     }
+    // };
 
     const stopScanner = async () => {
         if (scannerRef.current) {
-            try { await scannerRef.current.clear(); } catch (e) { }
+            try {
+                // เช็คว่าเป็น Instance ของ Html5Qrcode หรือไม่ เพื่อสั่ง stop
+                // (try-catch เผื่อไว้กรณีมันหยุดไปแล้ว)
+                await scannerRef.current.stop();
+                await scannerRef.current.clear();
+            } catch (e) {
+                console.log("Stop scanner error ignored:", e);
+            }
             scannerRef.current = null;
             setScanStatus("idle");
         }
@@ -443,7 +499,7 @@ export default function AdminPage() {
                         <h2 className="text-xl font-bold text-center text-emerald-800 mb-6">เข้าสู่ระบบเจ้าหน้าที่</h2>
                         <form onSubmit={handleLogin} className="space-y-4">
                             <input type="password"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-emerald-500 focus:ring-1 focus:ring-emerald-500"
                                 placeholder="รหัสผ่าน" value={passwordInput}
                                 onChange={e => setPasswordInput(e.target.value)} />
                             <button type="submit" disabled={loginLoading}
@@ -457,7 +513,7 @@ export default function AdminPage() {
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
                                 <FiCalendar className="text-gray-400" />
-                                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-transparent border-none outline-none text-sm font-medium" />
+                                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="text-gray-900 bg-transparent border-none outline-none text-sm font-medium" />
                             </div>
                             <button onClick={reloadData} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-70">
                                 <FiRefreshCw className={loading ? "animate-spin" : ""} /> {loading ? "กำลังโหลด..." : "อัปเดตข้อมูล"}
@@ -465,7 +521,7 @@ export default function AdminPage() {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">ทั้งหมด</p><p className="text-xl font-bold">{kpiStats.total}</p></div><FiUsers className="text-gray-300 text-2xl" /></div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">ทั้งหมด</p><p className="text-xl font-bold text-gray-900">{kpiStats.total}</p></div><FiUsers className="text-gray-300 text-2xl" /></div>
                             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">รอรับบริการ</p><p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p></div><FiClock className="text-yellow-200 text-2xl" /></div>
                             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">เช็คอิน</p><p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p></div><FiCheckCircle className="text-emerald-200 text-2xl" /></div>
                             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">ยกเลิก</p><p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p></div><FiXCircle className="text-rose-200 text-2xl" /></div>
@@ -480,8 +536,8 @@ export default function AdminPage() {
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name" fontSize={12} tick={{ fontSize: 10 }} />
                                             <YAxis allowDecimals={false} fontSize={12} />
-                                            <Tooltip cursor={{ fill: '#f0fdf4' }} contentStyle={{ borderRadius: '8px' }} />
-                                            <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} barSize={40} />
+                                            <Tooltip cursor={{ fill: '#f0fdf4' }} contentStyle={{ borderRadius: '8px' }} labelStyle={{ color: '#064e3b', fontWeight: 'bold' }} />
+                                            <Bar dataKey="count" name="จำนวน" fill="#059669" radius={[4, 4, 0, 0]} barSize={40} activeBar={{ fill: '#047857' }} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -505,8 +561,8 @@ export default function AdminPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-8 flex flex-col h-[600px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
                                 <div className="p-4 border-b border-gray-100 flex gap-3 bg-gray-50/50">
-                                    <input type="text" placeholder="ค้นหา..." className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                                    <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none cursor-pointer" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                                    <input type="text" placeholder="ค้นหา..." className="text-gray-900 placeholder:text-gray-400 flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                    <select className="placeholder:text-gray-400 text-gray-900 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none cursor-pointer" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                                         <option value="ALL">ทุกสถานะ</option><option value="BOOKED">รอรับบริการ</option><option value="CHECKED_IN">เช็คอินแล้ว</option><option value="CANCELLED">ยกเลิกแล้ว</option>
                                     </select>
                                 </div>
@@ -545,7 +601,33 @@ export default function AdminPage() {
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                                     <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> วันเปิดให้บริการ</h3>
                                     <div className="flex gap-2 mb-4">
-                                        <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="flex-1 border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 ring-emerald-500" />
+                                        {/* <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} 
+                                            placeholder="เลือกวันที่" 
+                                            className="text-gray-900 flex-1 border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 ring-emerald-500" /> */}
+                                        <div className="relative flex-1 border border-gray-200 rounded-lg bg-white focus-within:ring-1 focus-within:ring-emerald-500 overflow-hidden">
+                                            {/* 1. ตัว Input: ปรับให้เต็มพื้นที่ และลบเส้นขอบตัวเองออก (เพราะใช้ขอบของ div แม่แทน) */}
+                                            <input
+                                                type="date"
+                                                value={newDate}
+                                                onChange={e => setNewDate(e.target.value)}
+                                                onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                                                onFocus={() => setIsFocused(true)}
+                                                onBlur={() => setIsFocused(false)}
+                                                style={{ colorScheme: 'light' }}
+                                                className={`
+                                                text-gray-900 w-full h-full px-2 py-1.5 text-xs outline-none bg-transparent border-none
+                                                relative z-10 
+                                                ${!newDate ? 'text-transparent' : 'text-gray-900'}
+                                            `}
+                                            />
+
+                                            {/* 2. Placeholder: วางซ้อนข้างหลัง */}
+                                            {(!newDate && !isFocused) && (
+                                                <span className="absolute left-2 top-1.5 text-xs text-gray-400 pointer-events-none z-0">
+                                                    --เลือกวันที่เปิดให้บริการ--
+                                                </span>
+                                            )}
+                                        </div>
                                         <button
                                             onClick={handleAddDate}
                                             disabled={!newDate || addingDate}
