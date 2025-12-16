@@ -42,26 +42,52 @@ export default function Home() {
   const [lineDisplayName, setLineDisplayName] = useState("");
   const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
-  // --- 1. Load Initial Data (LIFF + Dates) ---
+  // // --- 1. Load Initial Data (LIFF + Dates) ---
+  // useEffect(() => {
+  //   const init = async () => {
+  //     setLoadingDates(true);
+
+  //     // A. เชื่อมต่อ LIFF (ใส่ ID ของคุณที่นี่)
+  //     try {
+  //       await liff.init({ liffId: LIFF_ID });
+  //       if (liff.isLoggedIn()) {
+  //         const profile = await liff.getProfile();
+  //         setLineUserId(profile.userId);
+  //         setLineDisplayName(profile.displayName);
+  //       } else {
+  //         liff.login();
+  //       }
+  //     } catch (err) {
+  //       console.error("LIFF Init Error:", err);
+  //     }
+
+  //     // B. ดึงวันที่เปิดจองจากตาราง 'days' ใน Supabase
+  //     try {
+  //       const { data, error } = await supabase
+  //         .from('days')
+  //         .select('date')
+  //         .eq('status', 'OPEN')
+  //         .order('date', { ascending: true });
+
+  //       if (error) throw error;
+  //       // แปลงค่าให้เป็น array วันที่ ['2025-02-14', ...]
+  //       setAvailableDates(data.map(d => d.date));
+  //     } catch (err) {
+  //       console.error("Failed to load dates:", err);
+  //       Swal.fire("ข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลวันที่ได้", "error");
+  //     } finally {
+  //       setLoadingDates(false);
+  //     }
+  //   };
+
+  //   init();
+  // }, []);
+  // --- 1. Load Data (แยกเป็น 2 ส่วนเพื่อให้ไวขึ้น) ---
+
+  // ส่วนที่ A: โหลดวันที่เปิดจอง (ทำงานทันที ไม่ต้องรอ LINE)
   useEffect(() => {
-    const init = async () => {
+    const fetchDates = async () => {
       setLoadingDates(true);
-
-      // A. เชื่อมต่อ LIFF (ใส่ ID ของคุณที่นี่)
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-          setLineDisplayName(profile.displayName);
-        } else {
-          liff.login();
-        }
-      } catch (err) {
-        console.error("LIFF Init Error:", err);
-      }
-
-      // B. ดึงวันที่เปิดจองจากตาราง 'days' ใน Supabase
       try {
         const { data, error } = await supabase
           .from('days')
@@ -70,18 +96,38 @@ export default function Home() {
           .order('date', { ascending: true });
 
         if (error) throw error;
-        // แปลงค่าให้เป็น array วันที่ ['2025-02-14', ...]
         setAvailableDates(data.map(d => d.date));
       } catch (err) {
         console.error("Failed to load dates:", err);
         Swal.fire("ข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลวันที่ได้", "error");
       } finally {
-        setLoadingDates(false);
+        setLoadingDates(false); // หยุดหมุนทันทีที่ได้วันที่
       }
     };
 
-    init();
+    fetchDates();
   }, []);
+
+  // ส่วนที่ B: เชื่อมต่อ LIFF (ทำเงียบๆ เบื้องหลัง)
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+          setLineDisplayName(profile.displayName);
+          console.log("LINE Login Success:", profile.userId);
+        } else {
+          liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
+        }
+      } catch (err) {
+        console.error("LIFF Init Error:", err);
+      }
+    };
+
+    initLiff();
+  }, [LIFF_ID]);
 
   // --- 2. Load Slots (เมื่อเลือกวัน) ---
   useEffect(() => {
