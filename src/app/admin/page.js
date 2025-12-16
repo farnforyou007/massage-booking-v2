@@ -743,9 +743,9 @@ export default function AdminPage() {
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-400">วันที่</p><b>{scanData.date}</b></div>
-                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-400">เวลา</p><b>{scanData.slot}</b></div>
-                                        <div className="col-span-2 bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-400">เบอร์โทร</p><b>{scanData.phone}</b></div>
+                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">วันที่</p><b>{scanData.date}</b></div>
+                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">เวลา</p><b>{scanData.slot}</b></div>
+                                        <div className="col-span-2 bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">เบอร์โทร</p><b>{scanData.phone}</b></div>
                                     </div>
                                     {scanData.status === "CHECKED_IN" && <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiCheckCircle /> รายการนี้เช็คอินไปแล้ว</div>}
                                     {scanData.status === "CANCELLED" && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiXCircle /> รายการนี้ถูกยกเลิก</div>}
