@@ -10,20 +10,41 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
 
-    const { data: slots } = await supabase.from('slots').select('*').order('start_time');
-    const { data: bookings } = await supabase.from('bookings').select('slot_id').eq('booking_date', date).neq('status', 'CANCELLED');
+    try {
+        // 1. ดึงรอบเวลาทั้งหมด
+        const { data: slots, error: slotError } = await supabase
+            .from('slots')
+            .select('*')
+            .eq('is_active', true)
+            .order('start_time');
 
-    const result = slots.map(s => {
-        const booked = bookings.filter(b => b.slot_id === s.start_time).length;
-        return {
-            id: s.start_time,
-            label: s.label,
-            capacity: s.capacity,
-            booked,
-            remaining: Math.max(0, s.capacity - booked),
-            is_active: s.is_active
-        };
-    });
+        if (slotError) throw slotError;
 
-    return NextResponse.json({ ok: true, items: result });
+        // 2. ดึงการจองของวันนั้น (เพื่อคำนวณที่เหลือ)
+        const { data: bookings, error: bookingError } = await supabase
+            .from('bookings')
+            .select('slot_id')
+            .eq('booking_date', date)
+            .neq('status', 'CANCELLED');
+
+        if (bookingError) throw bookingError;
+
+        // 3. คำนวณ
+        const result = slots.map(s => {
+            const bookedCount = bookings.filter(b => b.slot_id === s.start_time).length;
+            return {
+                id: s.start_time,
+                label: s.label,
+                capacity: s.capacity,
+                booked: bookedCount,
+                remaining: Math.max(0, s.capacity - bookedCount),
+                isFull: bookedCount >= s.capacity
+            };
+        });
+
+        return NextResponse.json({ ok: true, items: result });
+
+    } catch (error) {
+        return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    }
 }

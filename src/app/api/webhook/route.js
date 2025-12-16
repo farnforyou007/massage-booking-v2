@@ -49,17 +49,20 @@ export async function POST(request) {
                 }
                 // 3. แอดมิน
                 else if (userMsg === "แอดมิน" || userMsg === "ผู้ดูแล") {
-                    await lineClient.reply(replyToken, { type: "text", text: `เข้าสู่ระบบผู้ดูแล:\nhttps://${request.headers.get('host')}/admin` });
+                    // ดึง URL ของเว็บปัจจุบัน
+                    const host = request.headers.get('host') || 'booking-massage.vercel.app';
+                    const protocol = host.includes('localhost') ? 'http' : 'https';
+                    await lineClient.reply(replyToken, { type: "text", text: `เข้าสู่ระบบผู้ดูแล:\n${protocol}://${host}/admin` });
                 }
                 // 4. อื่นๆ
                 else {
-                    await lineClient.reply(replyToken, { type: "text", text: "ผมไม่เข้าใจคำสั่งครับ 😅\nลองพิมพ์ 'เมนู' เพื่อดูคำสั่งที่ใช้ได้นะครับ" });
+                    await lineClient.reply(replyToken, { type: "text", text: "ผมไม่เข้าใจคำสั่งครับ 😅\nลองพิมพ์ 'เมนู' หรือ 'จองคิว' ดูนะครับ" });
                 }
             }
         }
         return NextResponse.json({ status: 'ok' });
     } catch (error) {
-        console.error(error);
+        console.error("Webhook Error:", error);
         return NextResponse.json({ status: 'error' }, { status: 500 });
     }
 }

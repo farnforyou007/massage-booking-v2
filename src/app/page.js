@@ -4,6 +4,8 @@ import Swal from "sweetalert2";
 import { supabase } from "../supabaseClient"; // เรียก Supabase
 import { QRCodeCanvas } from "qrcode.react";
 import liff from "@line/liff"; // เรียก LIFF
+// เพิ่ม createBooking เข้าไปในปีกกาครับ
+import { getSlots, createBooking, getOpenDates } from "../api";
 import {
   FiCalendar,
   FiClock,
@@ -151,89 +153,178 @@ export default function Home() {
 
   // --- 3. Handle Submit ---
   // --- 3. Handle Submit (แก้ไขใหม่ให้ยิงไป API) ---
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   // Validation พื้นฐาน (เหมือนเดิม)
+  //   if (!date || !slotId || !name.trim() || !phone.trim()) {
+  //     setMessage({ text: "กรุณากรอกข้อมูลให้ครบทุกช่อง", ok: false });
+  //     return;
+  //   }
+  //   if (phone.length < 9) {
+  //     await Swal.fire("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์มือถือให้ถูกต้อง", "warning");
+  //     return;
+  //   }
+
+  //   // หาชื่อรอบเวลา (เหมือนเดิม)
+  //   const selectedSlot = slots.find((s) => s.id === slotId);
+
+  //   // Confirm Dialog (เหมือนเดิม)
+  //   const result = await Swal.fire({
+  //     title: "ยืนยันการจอง?",
+  //     html: `
+  //               <div class="text-left text-sm p-4 bg-gray-50 rounded-lg border border-gray-200">
+  //                   <p class="mb-1"><strong>วันที่:</strong> <span class="text-emerald-700">${formatFullThaiDate(date)}</span></p>
+  //                   <p class="mb-1"><strong>เวลา:</strong> <span class="text-emerald-700">${selectedSlot?.label}</span></p>
+  //                   <p class="mb-1"><strong>ชื่อ:</strong> ${name}</p>
+  //                   <p><strong>เบอร์โทร:</strong> ${phone}</p>
+  //               </div>
+  //           `,
+  //     icon: "question",
+  //     showCancelButton: true,
+  //     confirmButtonText: "ยืนยันการจอง",
+  //     cancelButtonText: "แก้ไข",
+  //     confirmButtonColor: "#047857",
+  //   });
+
+  //   if (!result.isConfirmed) return;
+
+  //   setIsSubmitting(true);
+  //   setMessage({ text: "กำลังบันทึกข้อมูล...", ok: true });
+
+  //   try {
+  //     // 🔥 เปลี่ยนตรงนี้! ยิงไปหา API แทนการ insert เอง
+  //     const response = await fetch('/api/booking', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         name: name,
+  //         phone: phone,
+  //         date: date,
+  //         slotId: selectedSlot.id,
+  //         slotLabel: selectedSlot.label,
+  //         lineUserId: lineUserId
+  //       })
+  //     });
+
+  //     const result = await response.json();
+
+  //     if (!result.ok) {
+  //       // ถ้า API ตอบกลับมาว่าไม่ผ่าน (เช่น จองซ้ำ หรือ เต็ม)
+  //       throw new Error(result.message);
+  //     }
+
+  //     // ถ้าสำเร็จ
+  //     setBookingCode(result.bookingCode);
+  //     setTicketUrl(result.bookingCode); // หรือ URL จริงถ้ามี
+  //     setMessage({ text: "จองสำเร็จเรียบร้อย!", ok: true });
+
+  //     await Swal.fire({
+  //       icon: "success",
+  //       title: "จองคิวสำเร็จ!",
+  //       html: `รหัสจอง: <b class="text-emerald-600 text-xl">${result.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
+  //       timer: 5000,
+  //       showConfirmButton: true,
+  //       confirmButtonText: "ตกลง"
+  //     });
+
+  //   } catch (err) {
+  //     // แจ้งเตือน Error ที่ได้จาก API
+  //     setMessage({ text: err.message, ok: false });
+  //     Swal.fire({
+  //       icon: 'error',
+  //       title: 'จองไม่สำเร็จ',
+  //       text: err.message
+  //     });
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation พื้นฐาน (เหมือนเดิม)
+    // -------------------------------------------------------
+    // 🔥 แก้ไข 1: Validation เข้มข้น
+    // -------------------------------------------------------
     if (!date || !slotId || !name.trim() || !phone.trim()) {
-      setMessage({ text: "กรุณากรอกข้อมูลให้ครบทุกช่อง", ok: false });
-      return;
-    }
-    if (phone.length < 9) {
-      await Swal.fire("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์มือถือให้ถูกต้อง", "warning");
-      return;
+      return Swal.fire("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบทุกช่อง", "warning");
     }
 
-    // หาชื่อรอบเวลา (เหมือนเดิม)
-    const selectedSlot = slots.find((s) => s.id === slotId);
+    // ล้างค่า เอาเฉพาะตัวเลข
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
 
-    // Confirm Dialog (เหมือนเดิม)
-    const result = await Swal.fire({
+    // เช็คว่าครบ 10 หลักไหม
+    if (cleanPhone.length !== 10) {
+      return Swal.fire("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์มือถือให้ครบ 10 หลัก", "warning");
+    }
+    // -------------------------------------------------------
+
+    const selectedSlot = slots.find(s => s.id === slotId);
+
+    const confirm = await Swal.fire({
       title: "ยืนยันการจอง?",
-      html: `
+      // html: `<div class="text-left text-sm p-4 bg-gray-50 rounded-lg">
+      //           <p><strong>วันที่:</strong> ${formatFullThaiDate(date)}</p>
+      //           <p><strong>เวลา:</strong> ${selectedSlot?.label}</p>
+      //           <p><strong>ชื่อ:</strong> ${name}</p>
+      //           <p><strong>เบอร์:</strong> ${cleanPhone}</p>
+      //       </div>`,
+             html: `
                 <div class="text-left text-sm p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p class="mb-1"><strong>วันที่:</strong> <span class="text-emerald-700">${formatFullThaiDate(date)}</span></p>
                     <p class="mb-1"><strong>เวลา:</strong> <span class="text-emerald-700">${selectedSlot?.label}</span></p>
                     <p class="mb-1"><strong>ชื่อ:</strong> ${name}</p>
-                    <p><strong>เบอร์โทร:</strong> ${phone}</p>
+                    <p><strong>เบอร์โทร:</strong>  ${cleanPhone}</p>
                 </div>
             `,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "ยืนยันการจอง",
-      cancelButtonText: "แก้ไข",
-      confirmButtonColor: "#047857",
+      icon: "question", showCancelButton: true, confirmButtonText: "ยืนยัน", confirmButtonColor: "#047857"
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirm.isConfirmed) return;
 
     setIsSubmitting(true);
-    setMessage({ text: "กำลังบันทึกข้อมูล...", ok: true });
-
+    setMessage({ text: "", ok: true });
     try {
-      // 🔥 เปลี่ยนตรงนี้! ยิงไปหา API แทนการ insert เอง
-      const response = await fetch('/api/booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name,
-          phone: phone,
-          date: date,
-          slotId: selectedSlot.id,
-          slotLabel: selectedSlot.label,
-          lineUserId: lineUserId
-        })
+      const res = await createBooking({
+        date, slot_id: slotId, slotLabel: selectedSlot?.label,
+        name: name.trim(),
+        phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
+        lineUserId: lineUserId || "NO_LIFF"
       });
 
-      const result = await response.json();
+      if (!res.ok) throw new Error(res.message);
 
-      if (!result.ok) {
-        // ถ้า API ตอบกลับมาว่าไม่ผ่าน (เช่น จองซ้ำ หรือ เต็ม)
-        throw new Error(result.message);
-      }
+      setBookingCode(res.bookingCode);
 
-      // ถ้าสำเร็จ
-      setBookingCode(result.bookingCode);
-      setTicketUrl(result.bookingCode); // หรือ URL จริงถ้ามี
+      const link = process.env.NEXT_PUBLIC_LIFF_ID
+        ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/ticket?code=${res.bookingCode}`
+        : `${window.location.origin}/ticket?code=${res.bookingCode}`;
+
+      setTicketUrl(link);
       setMessage({ text: "จองสำเร็จเรียบร้อย!", ok: true });
 
+      // await Swal.fire({ title: "จองสำเร็จ!", icon: "success", timer: 3000, showConfirmButton: false });
       await Swal.fire({
-        icon: "success",
-        title: "จองคิวสำเร็จ!",
-        html: `รหัสจอง: <b class="text-emerald-600 text-xl">${result.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
-        timer: 5000,
-        showConfirmButton: true,
-        confirmButtonText: "ตกลง"
-      });
+            icon: "success",
+            title: "จองคิวสำเร็จ!",
+              timer: 3000,
+            html: `รหัสจอง: <b class="text-emerald-600 text-xl">${res.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
+            // timer: 5000,
+            showConfirmButton: false,
+            confirmButtonText: "ตกลง"
+          });
 
     } catch (err) {
-      // แจ้งเตือน Error ที่ได้จาก API
       setMessage({ text: err.message, ok: false });
-      Swal.fire({
-        icon: 'error',
-        title: 'จองไม่สำเร็จ',
-        text: err.message
-      });
+      // Swal.fire("ผิดพลาด", err.message, "error");
+      await Swal.fire({
+            icon: "error",
+            title: "ผิดพลาด!",
+              timer: 2000,
+            text: err.message,
+            showConfirmButton: false,
+            // confirmButtonText: "ตกลง"
+          });
     } finally {
       setIsSubmitting(false);
     }
@@ -324,10 +415,10 @@ export default function Home() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   disabled={loadingDates || availableDates.length === 0}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white cursor-pointer appearance-none min-h-[50px] text-base disabled:bg-gray-100 disabled:text-gray-500"
+                  className="text-gray-900 placeholder:text-gray-400 block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white cursor-pointer appearance-none min-h-12.5 text-base disabled:bg-gray-100 disabled:text-gray-500"
                   required
                 >
-                  <option value="">
+                  <option value="" className="placeholder:text-gray-800">
                     {loadingDates ? "⏳ กำลังโหลดวันที่..." : availableDates.length === 0 ? "⚠️ ยังไม่มีรอบเปิดให้บริการ" : "-- กรุณาเลือกวันที่ --"}
                   </option>
                   {availableDates.map((d) => (
@@ -365,7 +456,7 @@ export default function Home() {
                   value={slotId}
                   onChange={(e) => setSlotId(e.target.value)}
                   disabled={!date || slotStatus.type === "loading"}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white appearance-none transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400"
+                  className="text-gray-900 placeholder:text-gray-400 block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white appearance-none transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400"
                   required
                 >
                   <option value="">-- กรุณาเลือกช่วงเวลา --</option>
@@ -389,7 +480,7 @@ export default function Home() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FiUser className="text-gray-400" />
                   </div>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white" placeholder="ระบุชื่อจริง" required />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="placeholder:text-gray-400 block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white text-gray-900" placeholder="ระบุชื่อจริง" required />
                 </div>
               </div>
 
@@ -400,7 +491,19 @@ export default function Home() {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FiPhone className="text-gray-400" />
                   </div>
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white" placeholder="08xxxxxxxx" maxLength={10} required />
+                  <input type="tel" value={phone}
+                    // onChange={(e) => setPhone(e.target.value)} 
+                    // className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white" 
+                    // placeholder="08xxxxxxxx" maxLength={10} required />
+                    onChange={e => {
+                      // อนุญาตให้พิมพ์แค่ตัวเลข 0-9 เท่านั้น
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setPhone(val);
+                    }}
+                    maxLength={10} // จำกัดความยาว 10 ตัว
+                    required
+                    placeholder="08xxxxxxxx"
+                    className="text-gray-900 placeholder:text-gray-400 block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm bg-white" />
                 </div>
               </div>
             </div>

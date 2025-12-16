@@ -1,15 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Setup Supabase (สำหรับใช้ในไฟล์นี้)
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-const LIFF_URL = `https://liff.line.me/${process.env.VITE_LIFF_ID}`; // อ่านจาก .env
+const LIFF_URL = `https://liff.line.me/${process.env.VITE_LIFF_ID}`;
 
 export const lineClient = {
+    // ส่งข้อความตอบกลับ (Reply)
     reply: async (replyToken, messages) => {
         if (!Array.isArray(messages)) messages = [messages];
         await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -22,6 +15,7 @@ export const lineClient = {
         });
     },
 
+    // ส่งข้อความหา (Push)
     push: async (userId, messages) => {
         if (!userId || userId === 'NO_LIFF') return;
         if (!Array.isArray(messages)) messages = [messages];
@@ -35,7 +29,7 @@ export const lineClient = {
         });
     },
 
-    // Template: ยืนยันการจอง (สีเขียว)
+    // 1. Template: ยืนยันการจอง (สีเขียว - เหมือน code.gs บรรทัด 119)
     createBookingFlex: (booking) => ({
         type: "flex",
         altText: `✅ ยืนยันการจองคิว: ${booking.code}`,
@@ -48,7 +42,7 @@ export const lineClient = {
                     { type: "text", text: "CONFIRMED", weight: "bold", color: "#ffffff", size: "xs", align: "center" },
                     { type: "text", text: "ข้อมูลการจองคิว", weight: "bold", color: "#ffffff", size: "lg", align: "center", margin: "md" }
                 ],
-                backgroundColor: "#047857",
+                backgroundColor: "#047857", // สีเขียว Emerald
                 paddingAll: "20px"
             },
             body: {
@@ -98,7 +92,7 @@ export const lineClient = {
                 contents: [
                     {
                         type: "button",
-                        action: { type: "uri", label: "ดูรายละเอียด / QR Code", uri: `${LIFF_URL}/ticket?code=${booking.code}` },
+                        action: { type: "uri", label: "ดูรายละเอียด / ยกเลิก", uri: `${LIFF_URL}/ticket?code=${booking.code}` },
                         style: "primary",
                         color: "#047857"
                     }
@@ -107,7 +101,7 @@ export const lineClient = {
         }
     }),
 
-    // Template: แจ้งเตือนล่วงหน้า 1 วัน (สีส้ม)
+    // 2. Template: แจ้งเตือนล่วงหน้า 1 วัน (สีส้ม - เหมือน code.gs บรรทัด 131)
     createReminderFlex: (booking) => ({
         type: "flex",
         altText: `🔔 แจ้งเตือนนัดหมาย: ${booking.name}`,
@@ -120,7 +114,7 @@ export const lineClient = {
                     { type: "text", text: "REMINDER", weight: "bold", color: "#ffffff", size: "xs", align: "center" },
                     { type: "text", text: "แจ้งเตือนนัดหมาย", weight: "bold", color: "#ffffff", "size": "lg", align: "center", margin: "md" }
                 ],
-                backgroundColor: "#F59E0B",
+                backgroundColor: "#F59E0B", // สีส้ม Amber
                 paddingAll: "20px"
             },
             body: {
@@ -151,6 +145,14 @@ export const lineClient = {
                                     { type: "text", text: "เวลา", color: "#aaaaaa", size: "sm", flex: 2 },
                                     { type: "text", text: booking.slot, wrap: true, color: "#666666", size: "sm", flex: 5, weight: "bold" }
                                 ]
+                            },
+                            {
+                                type: "box",
+                                layout: "baseline",
+                                contents: [
+                                    { type: "text", text: "สถานที่", color: "#aaaaaa", size: "sm", flex: 2 },
+                                    { type: "text", text: "อาคารสหเวช ชั้น 7\nห้อง TTM704", wrap: true, "color": "#666666", size: "sm", flex: 5 }
+                                ]
                             }
                         ]
                     }
@@ -171,7 +173,7 @@ export const lineClient = {
         }
     }),
 
-    // Template: แจ้งเตือนด่วน 1 ชม. (สีแดง)
+    // 3. Template: แจ้งเตือนด่วน 1 ชม. (สีแดง - เหมือน code.gs บรรทัด 155)
     createUrgentFlex: (booking) => ({
         type: "flex",
         altText: `⏳ ใกล้ถึงเวลานัด: ${booking.name}`,
@@ -184,7 +186,7 @@ export const lineClient = {
                     { type: "text", text: "URGENT", weight: "bold", color: "#ffffff", size: "xs", align: "center" },
                     { type: "text", text: "ใกล้ถึงเวลานัดหมาย", weight: "bold", color: "#ffffff", "size": "lg", align: "center", margin: "md" }
                 ],
-                backgroundColor: "#EF4444",
+                backgroundColor: "#EF4444", // สีแดง
                 paddingAll: "20px"
             },
             body: {
@@ -192,6 +194,7 @@ export const lineClient = {
                 layout: "vertical",
                 contents: [
                     { type: "text", text: `คุณ ${booking.name}`, weight: "bold", size: "xl", align: "center", color: "#1F2937" },
+                    { type: "text", text: `รหัสจอง: ${booking.code}`, weight: "bold", size: "md", align: "center", color: "#EF4444", margin: "sm" },
                     { type: "text", text: "อีกประมาณ 1 ชม. จะถึงเวลานัด", size: "xs", color: "#6B7280", align: "center", margin: "xs" },
                     { type: "separator", margin: "lg" },
                     {
@@ -206,6 +209,14 @@ export const lineClient = {
                                 contents: [
                                     { type: "text", text: "เวลา", color: "#aaaaaa", size: "sm", flex: 2 },
                                     { type: "text", text: booking.slot, wrap: true, color: "#EF4444", size: "xl", flex: 5, weight: "bold" }
+                                ]
+                            },
+                            {
+                                type: "box",
+                                layout: "baseline",
+                                contents: [
+                                    { type: "text", text: "สถานที่", color: "#aaaaaa", size: "sm", flex: 2 },
+                                    { type: "text", text: "อาคารสหเวช ชั้น 7\nห้อง TTM704", wrap: true, color: "#666666", size: "sm", flex: 5 }
                                 ]
                             }
                         ]
