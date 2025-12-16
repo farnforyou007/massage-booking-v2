@@ -443,19 +443,53 @@ export default function AdminPage() {
         } catch (err) { Swal.fire("Error", err.message, "error"); }
     };
 
+    // const handleFileUpload = async (e) => {
+    //     if (!e.target.files || e.target.files.length === 0) return;
+    //     const file = e.target.files[0];
+    //     setCameraEnabled(false);
+    //     Swal.fire({ title: 'กำลังอ่านรูป...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    //     const html5QrCode = new Html5Qrcode("reader-file-hidden");
+    //     try {
+    //         const result = await html5QrCode.scanFileV2(file, true);
+    //         if (result && result.decodedText) handleScanSuccess(result.decodedText);
+    //     } catch (err) {
+    //         Swal.close(); Swal.fire("อ่านรูปไม่ได้", "ไม่พบ QR Code", "error");
+    //     } finally {
+    //         html5QrCode.clear().catch(() => { });
+    //         e.target.value = '';
+    //     }
+    // };
     const handleFileUpload = async (e) => {
+        // 1. เช็คว่ามีไฟล์ไหม
         if (!e.target.files || e.target.files.length === 0) return;
+
         const file = e.target.files[0];
+
+        // 2. ปิดกล้องหลักก่อน (เผื่อเปิดค้างไว้) เพื่อประหยัดทรัพยากร
         setCameraEnabled(false);
+
+        // แสดง Loading
         Swal.fire({ title: 'กำลังอ่านรูป...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-        const html5QrCode = new Html5Qrcode("reader-file-hidden");
+
         try {
+            // 3. สร้าง Instance ใหม่สำหรับอ่านไฟล์
+            // (ต้องมั่นใจว่าใน return() มี <div id="reader-file-hidden" ...> อยู่จริง)
+            const html5QrCode = new Html5Qrcode("reader-file-hidden");
+
+            // 4. สั่งสแกนรูป
             const result = await html5QrCode.scanFileV2(file, true);
-            if (result && result.decodedText) handleScanSuccess(result.decodedText);
+
+            if (result && result.decodedText) {
+                handleScanSuccess(result.decodedText);
+            }
         } catch (err) {
-            Swal.close(); Swal.fire("อ่านรูปไม่ได้", "ไม่พบ QR Code", "error");
+            // กรณีอ่านไม่ออก หรือไฟล์ไม่มี QR Code
+            console.error("Scan Error:", err);
+            Swal.close();
+            Swal.fire("อ่านรูปไม่ได้", "รูปภาพไม่ชัดเจน หรือไม่พบ QR Code", "error");
         } finally {
-            html5QrCode.clear().catch(() => { });
+            // 5. ไม่ต้องสั่ง html5QrCode.clear() ครับ เพราะเราไม่ได้เปิดกล้อง
+            // แค่เคลียร์ค่า input ให้เลือกรูปเดิมซ้ำได้ก็พอ
             e.target.value = '';
         }
     };
@@ -726,7 +760,7 @@ export default function AdminPage() {
                                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                                     <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><FiSearch /> หรือค้นหาด้วยรหัส/เบอร์โทร</h3>
                                     <div className="flex gap-2">
-                                        <input type="text" value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="กรอกรหัสจอง..." className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                                        <input type="text" value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="กรอกรหัสจอง..." className="placeholder-gray-400 text-gray-800 flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                                         <button onClick={() => handleScanSuccess(manualCode)} disabled={!manualCode} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">ค้นหา</button>
                                     </div>
                                 </div>
@@ -743,9 +777,18 @@ export default function AdminPage() {
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">วันที่</p><b>{scanData.date}</b></div>
-                                        <div className="bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">เวลา</p><b>{scanData.slot}</b></div>
-                                        <div className="col-span-2 bg-stone-50 p-3 rounded-xl"><p className="text-xs text-gray-900">เบอร์โทร</p><b>{scanData.phone}</b></div>
+                                        <div className="bg-stone-50 p-3 rounded-xl">
+                                            <p className="text-xs text-gray-900">วันที่</p>
+                                            <b className="text-gray-600">{scanData.date}</b>
+                                        </div>
+                                        <div className="bg-stone-50 p-3 rounded-xl">
+                                            <p className="text-xs text-gray-900">เวลา</p>
+                                            <b className="text-gray-600">{scanData.slot}</b>
+                                        </div>
+                                        <div className="col-span-2 bg-stone-50 p-3 rounded-xl">
+                                            <p className="text-xs text-gray-900">เบอร์โทร</p>
+                                            <b className="text-gray-600">{scanData.phone}</b>
+                                        </div>
                                     </div>
                                     {scanData.status === "CHECKED_IN" && <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiCheckCircle /> รายการนี้เช็คอินไปแล้ว</div>}
                                     {scanData.status === "CANCELLED" && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiXCircle /> รายการนี้ถูกยกเลิก</div>}
