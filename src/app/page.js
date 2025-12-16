@@ -48,14 +48,14 @@ export default function Home() {
 
       // A. เชื่อมต่อ LIFF (ใส่ ID ของคุณที่นี่)
       try {
-        // await liff.init({ liffId: "YOUR_LIFF_ID" }); 
-        // if (liff.isLoggedIn()) {
-        //     const profile = await liff.getProfile();
-        //     setLineUserId(profile.userId);
-        //     setLineDisplayName(profile.displayName);
-        // } else {
-        //     liff.login();
-        // }
+        await liff.init({ liffId: "YOUR_LIFF_ID" }); 
+        if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            setLineUserId(profile.userId);
+            setLineDisplayName(profile.displayName);
+        } else {
+            liff.login();
+        }
       } catch (err) {
         console.error("LIFF Init Error:", err);
       }
