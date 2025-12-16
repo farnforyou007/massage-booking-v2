@@ -9,7 +9,7 @@ const prompt = Prompt({
 });
 
 export const metadata = {
-  title: "ระบบจัดการคิว | คณะการแพทย์แผนไทย",
+  title: "TTM Booking | คณะการแพทย์แผนไทย",
   description: "Thai Traditional Medicine Booking System",
 };
 
