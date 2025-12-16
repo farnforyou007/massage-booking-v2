@@ -10,7 +10,9 @@ const prompt = Prompt({
 
 export const metadata = {
   title: "TTM Booking | คณะการแพทย์แผนไทย",
-  description: "Thai Traditional Medicine Booking System",
+  description: "Thai Traditional Medicine ระบบจองคิวออนไลน์ คณะการแพทย์แผนไทย มหาวิทยาลัยสงขลานครินทร์",
+
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }) {
