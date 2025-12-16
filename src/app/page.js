@@ -466,7 +466,7 @@ export default function Home() {
                   required
                 >
                   <option value="" className="placeholder:text-gray-800">
-                    {loadingDates ? "⏳ กำลังโหลดวันที่..." : availableDates.length === 0 ? "⚠️ ยังไม่มีรอบเปิดให้บริการ" : "-- กรุณาเลือกวันที่ --"}
+                    {loadingDates ? "⏳ กำลังโหลดวันที่..." : availableDates.length === 0 ? "⚠️ ยังไม่เปิดให้จอง" : "-- กรุณาเลือกวันที่ --"}
                   </option>
                   {availableDates.map((d) => (
                     <option key={d} value={d}>

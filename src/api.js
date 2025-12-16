@@ -35,7 +35,8 @@ export async function adminGetBookings(date, token) {
 
 export async function adminGetSlotsSummary(date, token) {
     // ใช้ API เดียวกันกับหน้าบ้านได้เลย
-    const res = await fetch(`${API_BASE}/api/slots?date=${date}`);
+    // const res = await fetch(`${API_BASE}/api/slots?date=${date}`);
+    const res = await fetch(`${API_BASE}/api/admin/slots?date=${date}`);
     return await res.json();
 }
 
@@ -97,11 +98,52 @@ export async function updateDateStatus(date, status) {
 }
 
 // ฟังก์ชัน Dummy ที่ไม่ได้ใช้แล้ว แต่คงไว้กัน Error
-export async function adminUpdateSlotCapacity(slotId, capacity) {
-    const res = await fetch(`/api/admin/slots`, { // เรียกไปที่ไฟล์ที่เราเพิ่งสร้าง
+// export async function adminUpdateSlotCapacity(slotId, capacity) {
+//     const res = await fetch(`/api/admin/slots`, { // เรียกไปที่ไฟล์ที่เราเพิ่งสร้าง
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ slot_id: slotId, capacity })
+//     });
+//     return await res.json();
+// }
+
+// export async function adminUpdateSlotCapacity(id, capacity) {
+//     // ส่ง label เดิมไปก่อน (หรือจะไปแก้ที่หน้าเว็บให้ส่ง label มาด้วยก็ได้)
+//     // แต่ทางที่ดีที่สุดคือ ให้หน้าเว็บเลิกใช้ฟังก์ชันนี้ครับ
+//     console.warn("Function นี้เลิกใช้แล้ว กรุณาใช้ updateSlot แทน");
+//     return { ok: false, message: "กรุณารีเฟรชหน้าเว็บ เพื่อใช้โค้ดล่าสุด" };
+// }
+
+// --- เพิ่มต่อท้ายในไฟล์ api.js ---
+
+// เพิ่มรอบเวลาใหม่
+export async function addSlot(label, capacity) {
+    // สมมติว่า Backend คุณรับ label (เช่น "09:00-10:00") และ capacity
+    // และอาจจะต้องสร้าง start_time จาก label หรือส่งไปตรงๆ ขึ้นอยู่กับ database
+    const res = await fetch(`${API_BASE}/api/admin/slots`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot_id: slotId, capacity })
+        body: JSON.stringify({ label, capacity })
+    });
+    return await res.json();
+}
+
+// ลบรอบเวลา
+export async function deleteSlot(id) {
+    const res = await fetch(`${API_BASE}/api/admin/slots`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+    return await res.json();
+}
+
+// แก้ไขรอบเวลา (ชื่อรอบ + จำนวน)
+export async function updateSlot(id, label, capacity) {
+    const res = await fetch(`${API_BASE}/api/admin/slots`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, label, capacity })
     });
     return await res.json();
 }

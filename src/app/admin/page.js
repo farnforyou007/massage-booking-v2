@@ -14,7 +14,10 @@ import {
     addOpenDate,
     deleteOpenDate,
     getManageDates,
-    updateDateStatus
+    updateDateStatus,
+    addSlot,
+    deleteSlot,
+    updateSlot
 } from "../../api";
 import {
     FiCalendar, FiRefreshCw, FiClock,
@@ -207,30 +210,30 @@ export default function AdminPage() {
         }
     }
 
-    async function handleEditCapacity(slot) {
-        const { value: newCap } = await Swal.fire({
-            title: `แก้ไขจำนวนรับ (${slot.label})`,
-            input: "number",
-            inputValue: slot.capacity,
-            showCancelButton: true,
-            confirmButtonText: "บันทึก",
-            confirmButtonColor: "#059669"
-        });
+    // async function handleEditCapacity(slot) {
+    //     const { value: newCap } = await Swal.fire({
+    //         title: `แก้ไขจำนวนรับ (${slot.label})`,
+    //         input: "number",
+    //         inputValue: slot.capacity,
+    //         showCancelButton: true,
+    //         confirmButtonText: "บันทึก",
+    //         confirmButtonColor: "#059669"
+    //     });
 
-        if (newCap) {
-            Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-            try {
-                const res = await adminUpdateSlotCapacity(slot.id, newCap, authToken);
-                Swal.close();
-                if (res.ok) {
-                    Toast.fire({ icon: 'success', title: 'บันทึกสำเร็จ' });
-                    reloadData();
-                } else {
-                    throw new Error(res.message);
-                }
-            } catch (err) { Swal.fire("Error", err.message, "error"); }
-        }
-    }
+    //     if (newCap) {
+    //         Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    //         try {
+    //             const res = await adminUpdateSlotCapacity(slot.id, newCap, authToken);
+    //             Swal.close();
+    //             if (res.ok) {
+    //                 Toast.fire({ icon: 'success', title: 'บันทึกสำเร็จ' });
+    //                 reloadData();
+    //             } else {
+    //                 throw new Error(res.message);
+    //             }
+    //         } catch (err) { Swal.fire("Error", err.message, "error"); }
+    //     }
+    // }
 
     const handleAddDate = async () => {
         if (!newDate) return;
@@ -497,6 +500,111 @@ export default function AdminPage() {
     const handleConfirmCheckIn = () => handleChangeStatus(scanData, "CHECKED_IN");
     const handleResetScan = () => { setScanData(null); setManualCode(""); };
 
+    // --- ฟังก์ชันจัดการคิว (ใหม่) ---
+
+    // 1. เพิ่มรอบเวลาใหม่
+    const handleAddSlot = async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'เพิ่มรอบเวลาใหม่',
+            html:
+                '<div class="text-left text-sm mb-1">ช่วงเวลา (เช่น 09:00-10:00)</div>' +
+                '<input id="swal-input-label" class="swal2-input" placeholder="09:00-10:00" style="margin-top:0">' +
+                '<div class="text-left text-sm mb-1 mt-3">จำนวนที่รับ (คน)</div>' +
+                '<input id="swal-input-cap" class="swal2-input" type="number" placeholder="5" style="margin-top:0">',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            confirmButtonColor: '#059669',
+            preConfirm: () => {
+                return [
+                    document.getElementById('swal-input-label').value,
+                    document.getElementById('swal-input-cap').value
+                ]
+            }
+        });
+
+        if (formValues) {
+            const [label, capacity] = formValues;
+            if (!label || !capacity) return Swal.fire("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบ", "warning");
+
+            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+            try {
+                const res = await addSlot(label, parseInt(capacity)); // เรียก API
+                Swal.close();
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: 'เพิ่มรอบเรียบร้อย' });
+                    reloadData(); // โหลดข้อมูลใหม่
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (err) { Swal.fire("Error", err.message, "error"); }
+        }
+    };
+
+    // 2. แก้ไขรอบเวลา (แก้ได้ทั้งชื่อและจำนวน)
+    const handleEditSlotFull = async (slot) => {
+        const { value: formValues } = await Swal.fire({
+            title: 'แก้ไขรอบเวลา',
+            html:
+                '<div class="text-left text-sm mb-1">ช่วงเวลา</div>' +
+                `<input id="swal-edit-label" class="swal2-input" value="${slot.label}" style="margin-top:0">` +
+                '<div class="text-left text-sm mb-1 mt-3">จำนวนที่รับ (คน)</div>' +
+                `<input id="swal-edit-cap" class="swal2-input" type="number" value="${slot.capacity}" style="margin-top:0">`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            confirmButtonColor: '#059669',
+            preConfirm: () => {
+                return [
+                    document.getElementById('swal-edit-label').value,
+                    document.getElementById('swal-edit-cap').value
+                ]
+            }
+        });
+
+        if (formValues) {
+            const [newLabel, newCap] = formValues;
+            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+            try {
+                const res = await updateSlot(slot.id, newLabel, parseInt(newCap)); // เรียก API
+                Swal.close();
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: 'แก้ไขเรียบร้อย' });
+                    reloadData();
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (err) { Swal.fire("Error", err.message, "error"); }
+        }
+    };
+
+    // 3. ลบรอบเวลา
+    const handleDeleteSlot = async (slot) => {
+        const result = await Swal.fire({
+            title: 'ลบรอบเวลานี้?',
+            text: `ต้องการลบรอบ "${slot.label}" ออกจากระบบ?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'กำลังลบ...', didOpen: () => Swal.showLoading() });
+            try {
+                const res = await deleteSlot(slot.id); // เรียก API
+                Swal.close();
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: 'ลบเรียบร้อย' });
+                    reloadData();
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (err) { Swal.fire("Error", err.message, "error"); }
+        }
+    };
+
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap'); .font-sans { font-family: 'Prompt', sans-serif; }`}</style>
@@ -633,7 +741,7 @@ export default function AdminPage() {
 
                             <div className="lg:col-span-4 space-y-6">
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                                    <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> วันเปิดให้บริการ</h3>
+                                    <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> จัดการวันเปิดให้บริการ</h3>
                                     <div className="flex gap-2 mb-4">
                                         {/* <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} 
                                             placeholder="เลือกวันที่" 
@@ -667,7 +775,7 @@ export default function AdminPage() {
                                             disabled={!newDate || addingDate}
                                             className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
                                         >
-                                            {addingDate ? <FiLoader className="animate-spin" /> : <FiPlus />} {addingDate ? "..." : "เพิ่ม"}
+                                            {addingDate ? <FiLoader className="animate-spin" /> : <FiPlus />} {addingDate ? "..." : "เพิ่มวันที่"}
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
@@ -702,7 +810,7 @@ export default function AdminPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
+                                {/* <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
                                     <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
                                         <FiLayers className="text-blue-600" /> จัดการคิว ({Array.isArray(slots) ? slots.length : 0})
                                     </h3>
@@ -725,6 +833,75 @@ export default function AdminPage() {
                                             ))
                                         ) : (
                                             <div className="text-center text-gray-400 text-xs mt-10"><p>ไม่พบข้อมูลรอบเวลา</p><p className="opacity-50">(หรือกำลังโหลด...)</p></div>
+                                        )}
+                                    </div>
+                                </div> */}
+                                {/* ส่วนแสดงผลจัดการคิว */}
+                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                                            <FiLayers className="text-blue-600" /> จัดการช่วงเวลา / คิว ({Array.isArray(slots) ? slots.length : 0})
+                                        </h3>
+                                        {/* ปุ่มเพิ่มรอบเวลาใหม่ */}
+                                        {/* <button
+                                            onClick={handleAddSlot}
+                                            className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded hover:bg-emerald-100 flex items-center gap-1 transition-colors"
+                                        >
+                                            <FiPlus /> เพิ่มรอบ
+                                        </button> */}
+                                        <button
+                                            onClick={handleAddSlot}
+                                            className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-sm"
+                                        >
+                                            <FiPlus /> เพิ่มรอบ
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                                        {Array.isArray(slots) && slots.length > 0 ? (
+                                            slots.map((s) => (
+                                                <div key={s.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-2 group hover:border-emerald-200 transition-colors">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-bold text-xs text-gray-700">{s.label}</span>
+                                                        <div className="flex gap-1">
+                                                            {/* ปุ่มแก้ไข */}
+                                                            <button
+                                                                onClick={() => handleEditSlotFull(s)}
+                                                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                                                title="แก้ไข"
+                                                            >
+                                                                <FiEdit2 size={12} />
+                                                            </button>
+                                                            {/* ปุ่มลบ */}
+                                                            <button
+                                                                onClick={() => handleDeleteSlot(s)}
+                                                                className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                                                                title="ลบ"
+                                                            >
+                                                                <FiTrash2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    {/* Progress Bar */}
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                            style={{ width: `${(s.booked / s.capacity) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <div className="flex justify-between text-[10px] text-gray-500">
+                                                        <span>จอง {s.booked}/{s.capacity}</span>
+                                                        <span>{s.remaining === 0 ? 'เต็ม' : 'ว่าง ' + s.remaining}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center text-gray-400 text-xs mt-10">
+                                                <p>ไม่พบข้อมูลรอบเวลา</p>
+                                                <button onClick={handleAddSlot} className="mt-2 text-emerald-600 underline hover:text-emerald-700">
+                                                    + เพิ่มรอบแรก
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
