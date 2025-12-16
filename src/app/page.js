@@ -40,6 +40,7 @@ export default function Home() {
   // Line Profile
   const [lineUserId, setLineUserId] = useState("");
   const [lineDisplayName, setLineDisplayName] = useState("");
+  const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
   // --- 1. Load Initial Data (LIFF + Dates) ---
   useEffect(() => {
@@ -48,13 +49,13 @@ export default function Home() {
 
       // A. เชื่อมต่อ LIFF (ใส่ ID ของคุณที่นี่)
       try {
-        await liff.init({ liffId: "YOUR_LIFF_ID" }); 
+        await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile();
-            setLineUserId(profile.userId);
-            setLineDisplayName(profile.displayName);
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+          setLineDisplayName(profile.displayName);
         } else {
-            liff.login();
+          liff.login();
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
@@ -269,7 +270,7 @@ export default function Home() {
       //           <p><strong>ชื่อ:</strong> ${name}</p>
       //           <p><strong>เบอร์:</strong> ${cleanPhone}</p>
       //       </div>`,
-             html: `
+      html: `
                 <div class="text-left text-sm p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p class="mb-1"><strong>วันที่:</strong> <span class="text-emerald-700">${formatFullThaiDate(date)}</span></p>
                     <p class="mb-1"><strong>เวลา:</strong> <span class="text-emerald-700">${selectedSlot?.label}</span></p>
@@ -305,26 +306,26 @@ export default function Home() {
 
       // await Swal.fire({ title: "จองสำเร็จ!", icon: "success", timer: 3000, showConfirmButton: false });
       await Swal.fire({
-            icon: "success",
-            title: "จองคิวสำเร็จ!",
-              timer: 3000,
-            html: `รหัสจอง: <b class="text-emerald-600 text-xl">${res.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
-            // timer: 5000,
-            showConfirmButton: false,
-            confirmButtonText: "ตกลง"
-          });
+        icon: "success",
+        title: "จองคิวสำเร็จ!",
+        timer: 3000,
+        html: `รหัสจอง: <b class="text-emerald-600 text-xl">${res.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
+        // timer: 5000,
+        showConfirmButton: false,
+        confirmButtonText: "ตกลง"
+      });
 
     } catch (err) {
       setMessage({ text: err.message, ok: false });
       // Swal.fire("ผิดพลาด", err.message, "error");
       await Swal.fire({
-            icon: "error",
-            title: "ผิดพลาด!",
-              timer: 2000,
-            text: err.message,
-            showConfirmButton: false,
-            // confirmButtonText: "ตกลง"
-          });
+        icon: "error",
+        title: "ผิดพลาด!",
+        timer: 2000,
+        text: err.message,
+        showConfirmButton: false,
+        // confirmButtonText: "ตกลง"
+      });
     } finally {
       setIsSubmitting(false);
     }
