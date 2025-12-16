@@ -1,5 +1,5 @@
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-const LIFF_URL = `https://liff.line.me/${process.env.VITE_LIFF_ID}`;
+const LIFF_URL = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`;
 
 export const lineClient = {
     // ส่งข้อความตอบกลับ (Reply)
