@@ -207,6 +207,36 @@ export default function Home() {
     };
 
     fetchSlots();
+
+    const bookingChannel = supabase
+      .channel('realtime-bookings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' }, 
+        () => {
+          console.log('มีคนจอง/ยกเลิก! อัปเดตที่ว่างด่วน...');
+          fetchSlots(); 
+        }
+      )
+      .subscribe();
+
+    const slotChannel = supabase
+      .channel('realtime-slots')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'slots' },
+        () => {
+          console.log('Admin แก้ไขรอบเวลา! อัปเดต Capacity ด่วน...');
+          fetchSlots();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingChannel);
+      // 🔥🔥 ต้องเอาตัวใหม่มาใส่ใน cleanup ด้วยครับ 🔥🔥
+      supabase.removeChannel(slotChannel);
+    };
   }, [date]);
 
   // Helper: แปลงวันที่ไทย
