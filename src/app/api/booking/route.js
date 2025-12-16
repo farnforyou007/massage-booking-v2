@@ -58,12 +58,37 @@ export async function POST(request) {
         if (error) throw error;
 
         // 4. ส่งไลน์ยืนยัน (แก้ส่งรหัสใหม่ไปด้วย)
+        // if (lineUserId && lineUserId !== 'NO_LIFF') {
+        //     const flex = lineClient.createBookingFlex({
+        //         code: newBookingCode, // ใช้รหัสใหม่
+        //         name, date, slot: slotLabel
+        //     });
+        //     await lineClient.push(lineUserId, flex);
+        // }
+
         if (lineUserId && lineUserId !== 'NO_LIFF') {
-            const flex = lineClient.createBookingFlex({
-                code: newBookingCode, // ใช้รหัสใหม่
-                name, date, slot: slotLabel
-            });
-            await lineClient.push(lineUserId, flex);
+            try {
+                // สร้างลิงก์สำหรับกดดูตั๋ว (ใช้ LIFF URL ที่คุณจะตั้งค่าใน Vercel)
+                const liffUrl = process.env.NEXT_PUBLIC_LIFF_ID 
+                    ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/ticket?code=${newBookingCode}`
+                    : `https://google.com`;
+
+                // สร้างการ์ด
+                const flexMessage = lineClient.createBookingFlex({
+                    code: newBookingCode,
+                    name: name,
+                    date: date,
+                    slot: slotLabel,
+                    ticketUrl: liffUrl
+                });
+
+                // ส่งเข้าไลน์
+                await lineClient.push(lineUserId, flexMessage);
+                console.log("✅ Sent LINE to:", lineUserId);
+            } catch (lineErr) {
+                console.error("⚠️ Failed to send LINE:", lineErr);
+                // ไม่ต้อง throw error นะครับ เดี๋ยวหน้าเว็บพัง ให้แค่แจ้งเตือนใน log พอ
+            }
         }
 
         // ส่งกลับหน้าบ้าน
