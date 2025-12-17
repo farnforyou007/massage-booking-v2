@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import Swal from "sweetalert2";
 // import { Html5QrcodeScanner } from "html5-qrcode";
 import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
+import * as XLSX from 'xlsx';
 import {
     adminLogin,
     adminGetBookings,
@@ -17,19 +18,21 @@ import {
     updateDateStatus,
     addSlot,
     deleteSlot,
-    updateSlot
+    updateSlot,
+    adminChangePassword
 } from "../../api";
 import {
     FiCalendar, FiRefreshCw, FiClock,
     FiCheckCircle, FiXCircle, FiActivity, FiEdit2, FiLogOut,
     FiLayers, FiUsers, FiSearch, FiCheckSquare,
     FiCamera, FiImage, FiAlertTriangle, FiCameraOff, FiPlus, FiTrash2, FiPieChart, FiBarChart2,
-    FiLoader, FiPhone, FiLock, FiUnlock
+    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText
 } from "react-icons/fi";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
 } from 'recharts';
+
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -48,8 +51,11 @@ const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',
     showConfirmButton: false,
-    timer: 3000,
+    timer: 2000,
     timerProgressBar: true,
+    customClass: {
+        title: 'my-toast-title'
+    },
     didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
@@ -89,7 +95,7 @@ export default function AdminPage() {
     const scannerRef = useRef(null);
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
-
+    const [showDateManager, setShowDateManager] = useState(false)
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
@@ -261,12 +267,15 @@ export default function AdminPage() {
 
     const handleDeleteDate = async (dateStr) => {
         const confirm = await Swal.fire({
-            title: 'ปิดรับจอง?',
-            text: `ต้องการลบวันที่ ${formatThaiDateAdmin(dateStr)} ออกจากระบบ?`,
+            title: 'ปิดรับการจอง?',
+            text: `ต้องการลบวันที่ ${formatThaiDateAdmin(dateStr)} ออกจากระบบ ?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'ลบเลย'
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,
+            showCloseButton: true
         });
 
         if (confirm.isConfirmed) {
@@ -501,88 +510,222 @@ export default function AdminPage() {
     const handleResetScan = () => { setScanData(null); setManualCode(""); };
 
     // --- ฟังก์ชันจัดการคิว (ใหม่) ---
-
-    // 1. เพิ่มรอบเวลาใหม่
     const handleAddSlot = async () => {
-        const { value: formValues } = await Swal.fire({
+        await Swal.fire({
             title: 'เพิ่มรอบเวลาใหม่',
-            html:
-                '<div class="text-left text-sm mb-1">ช่วงเวลา (เช่น 09:00-10:00)</div>' +
-                '<input id="swal-input-label" class="swal2-input" placeholder="09:00-10:00" style="margin-top:0">' +
-                '<div class="text-left text-sm mb-1 mt-3">จำนวนที่รับ (คน)</div>' +
-                '<input id="swal-input-cap" class="swal2-input" type="number" placeholder="5" style="margin-top:0">',
-            focusConfirm: false,
+            html: `
+            <div class="swal-form-container">
+                <div class="input-group">
+                    <label>ช่วงเวลา</label>
+                    <div class="input-wrapper">
+                        <input id="swal-input-label" class="swal2-input custom-input" placeholder="เช่น 09:00-10:00">
+                        <div id="label-icon" class="status-icon-box"></div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>จำนวนที่รับ (คน)</label>
+                    <div class="input-wrapper">
+                        <input id="swal-input-cap" class="swal2-input custom-input" type="number" placeholder="5">
+                        <div id="cap-icon" class="status-icon-box"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .swal-form-container { margin-top: 15px; }
+                .input-group { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 15px; width: 100%; }
+                .input-group label { font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 6px; margin-left: 4px; }
+                .input-wrapper { position: relative; width: 100%; }
+                .custom-input {
+                    height: 42px !important; margin: 0 !important; width: 100% !important;
+                    font-size: 14px !important; border-radius: 10px !important;
+                    border: 1px solid #e5e7eb !important; transition: all 0.2s !important;
+                    padding-right: 40px !important;
+                }
+                .input-error { border-color: #f43f5e !important; background-color: #fff1f2 !important; }
+                .status-icon-box {
+                    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+                    border-radius: 50%; transition: all 0.3s ease;
+                }
+                .icon-success { background-color: #d1fae5; color: #059669; }
+                .icon-error { background-color: #ffe4e6; color: #e11d48; }
+                .swal2-validation-message {
+                    background: transparent !important; color: #e11d48 !important;
+                    font-size: 11px !important; margin-top: 10px !important; border: none !important;
+                    justify-content: center !important; padding: 0 !important;
+                }
+                .swal2-icon { width: 40px !important; height: 40px !important; margin: 10px auto !important; }
+                .swal2-icon .swal2-icon-content { font-size: 24px !important; }
+                .input-group label { 
+                font-size: 15px; /* 🔥 เดิมเป็น 13px ลองปรับเป็น 15px หรือ 16px ตามใจชอบ */
+                font-weight: 600; /* หากต้องการให้ตัวหนาขึ้นอีก เปลี่ยนจาก 500 เป็น 600 */
+                color: #4b5563; 
+                margin-bottom: 6px; 
+                margin-left: 4px; 
+            }
+                .input-group { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: flex-start; 
+                margin-bottom: 20px; /* 🔥 เดิมเป็น 15px เพิ่มเป็น 20px เพื่อไม่ให้แต่ละช่องเบียดกัน */
+                width: 100%; 
+            }
+            </style>
+        `,
+            didOpen: () => {
+                const labelInput = document.getElementById('swal-input-label');
+                const capInput = document.getElementById('swal-input-cap');
+                const checkIcon = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" height="12" width="12"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+
+                const validate = (el, iconId) => {
+                    const iconBox = document.getElementById(iconId);
+                    if (el.value.trim()) {
+                        el.classList.remove('input-error');
+                        iconBox.className = 'status-icon-box icon-success';
+                        iconBox.innerHTML = checkIcon;
+                    } else {
+                        iconBox.innerHTML = '';
+                        iconBox.className = 'status-icon-box';
+                    }
+                };
+
+                labelInput.addEventListener('input', () => validate(labelInput, 'label-icon'));
+                capInput.addEventListener('input', () => validate(capInput, 'cap-icon'));
+            },
             showCancelButton: true,
             confirmButtonText: 'บันทึก',
             confirmButtonColor: '#059669',
-            preConfirm: () => {
-                return [
-                    document.getElementById('swal-input-label').value,
-                    document.getElementById('swal-input-cap').value
-                ]
+            cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,
+            showCloseButton: true,
+            preConfirm: async () => {
+                const label = document.getElementById('swal-input-label').value;
+                const capacity = document.getElementById('swal-input-cap').value;
+
+                if (!label) {
+                    document.getElementById('swal-input-label').classList.add('input-error');
+                    return Swal.showValidationMessage('กรุณากรอกช่วงเวลา');
+                }
+                if (!capacity || capacity <= 0) {
+                    document.getElementById('swal-input-cap').classList.add('input-error');
+                    return Swal.showValidationMessage('กรุณากรอกจำนวนที่รับให้ถูกต้อง');
+                }
+
+                try {
+                    const res = await addSlot(label, parseInt(capacity));
+                    if (!res.ok) throw new Error(res.message);
+                    return res;
+                } catch (err) {
+                    return Swal.showValidationMessage(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Toast.fire({ icon: 'success', title: 'เพิ่มรอบเรียบร้อย' });
+                reloadData();
             }
         });
-
-        if (formValues) {
-            const [label, capacity] = formValues;
-            if (!label || !capacity) return Swal.fire("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบ", "warning");
-
-            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
-            try {
-                const res = await addSlot(label, parseInt(capacity)); // เรียก API
-                Swal.close();
-                if (res.ok) {
-                    Toast.fire({ icon: 'success', title: 'เพิ่มรอบเรียบร้อย' });
-                    reloadData(); // โหลดข้อมูลใหม่
-                } else {
-                    throw new Error(res.message);
-                }
-            } catch (err) { Swal.fire("Error", err.message, "error"); }
-        }
     };
-
-    // 2. แก้ไขรอบเวลา (แก้ได้ทั้งชื่อและจำนวน)
     const handleEditSlotFull = async (slot) => {
-        const { value: formValues } = await Swal.fire({
+        await Swal.fire({
             title: 'แก้ไขรอบเวลา',
-            html:
-                '<div class="text-left text-sm mb-1">ช่วงเวลา</div>' +
-                `<input id="swal-edit-label" class="swal2-input" value="${slot.label}" style="margin-top:0">` +
-                '<div class="text-left text-sm mb-1 mt-3">จำนวนที่รับ (คน)</div>' +
-                `<input id="swal-edit-cap" class="swal2-input" type="number" value="${slot.capacity}" style="margin-top:0">`,
-            focusConfirm: false,
+            html: `
+            <div class="swal-form-container">
+                <div class="input-group">
+                    <label>ช่วงเวลา</label>
+                    <div class="input-wrapper">
+                        <input id="swal-edit-label" class="swal2-input custom-input" value="${slot.label}">
+                        <div id="edit-label-icon" class="status-icon-box icon-success">
+                            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" height="12" width="12"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>จำนวนที่รับ (คน)</label>
+                    <div class="input-wrapper">
+                        <input id="swal-edit-cap" class="swal2-input custom-input" type="number" value="${slot.capacity}">
+                        <div id="edit-cap-icon" class="status-icon-box icon-success">
+                            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" height="12" width="12"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .swal-form-container { margin-top: 15px; }
+                .input-group { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 15px; width: 100%; }
+                .input-group label { font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 6px; margin-left: 4px; }
+                .input-wrapper { position: relative; width: 100%; }
+                .custom-input {
+                    height: 42px !important; margin: 0 !important; width: 100% !important;
+                    font-size: 14px !important; border-radius: 10px !important;
+                    border: 1px solid #e5e7eb !important; transition: all 0.2s !important;
+                    padding-right: 40px !important;
+                }
+                .input-error { border-color: #f43f5e !important; background-color: #fff1f2 !important; }
+                .status-icon-box {
+                    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+                    border-radius: 50%; transition: all 0.3s ease;
+                }
+                .icon-success { background-color: #d1fae5; color: #059669; }
+                .swal2-validation-message {
+                    background: transparent !important; color: #e11d48 !important;
+                    font-size: 11px !important; margin-top: 10px !important; border: none !important;
+                }
+                    .input-group label { 
+                font-size: 15px; /* 🔥 เดิมเป็น 13px ลองปรับเป็น 15px หรือ 16px ตามใจชอบ */
+                font-weight: 600; /* หากต้องการให้ตัวหนาขึ้นอีก เปลี่ยนจาก 500 เป็น 600 */
+                color: #4b5563; 
+                margin-bottom: 6px; 
+                margin-left: 4px; 
+            }
+                .input-group { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: flex-start; 
+                margin-bottom: 20px; /* 🔥 เดิมเป็น 15px เพิ่มเป็น 20px เพื่อไม่ให้แต่ละช่องเบียดกัน */
+                width: 100%; 
+            }
+            </style>
+        `,
             showCancelButton: true,
-            confirmButtonText: 'บันทึก',
+            confirmButtonText: 'บันทึกการแก้ไข',
             confirmButtonColor: '#059669',
-            preConfirm: () => {
-                return [
-                    document.getElementById('swal-edit-label').value,
-                    document.getElementById('swal-edit-cap').value
-                ]
+            showLoaderOnConfirm: true,
+            showCloseButton: true,
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: async () => {
+                const newLabel = document.getElementById('swal-edit-label').value;
+                const newCap = document.getElementById('swal-edit-cap').value;
+
+                if (!newLabel) return Swal.showValidationMessage('กรุณากรอกช่วงเวลา');
+                if (!newCap || newCap <= 0) return Swal.showValidationMessage('กรุณากรอกจำนวนที่รับให้ถูกต้อง');
+
+                try {
+                    const res = await updateSlot(slot.id, newLabel, parseInt(newCap));
+                    if (!res.ok) throw new Error(res.message);
+                    return res;
+                } catch (err) {
+                    return Swal.showValidationMessage(err.message || 'เกิดข้อผิดพลาด');
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Toast.fire({ icon: 'success', title: 'แก้ไขเรียบร้อย' });
+                reloadData();
             }
         });
-
-        if (formValues) {
-            const [newLabel, newCap] = formValues;
-            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
-            try {
-                const res = await updateSlot(slot.id, newLabel, parseInt(newCap)); // เรียก API
-                Swal.close();
-                if (res.ok) {
-                    Toast.fire({ icon: 'success', title: 'แก้ไขเรียบร้อย' });
-                    reloadData();
-                } else {
-                    throw new Error(res.message);
-                }
-            } catch (err) { Swal.fire("Error", err.message, "error"); }
-        }
     };
 
     // 3. ลบรอบเวลา
     const handleDeleteSlot = async (slot) => {
         const result = await Swal.fire({
-            title: 'ลบรอบเวลานี้?',
-            text: `ต้องการลบรอบ "${slot.label}" ออกจากระบบ?`,
+            title: 'ลบรอบเวลานี้ ?',
+            text: `ต้องการลบรอบ" ${slot.label} " ออกจากระบบ?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -605,6 +748,313 @@ export default function AdminPage() {
         }
     };
 
+    const handleChangePassword = async () => {
+        await Swal.fire({
+            title: 'เปลี่ยนรหัสผ่าน',
+            html: `
+            <div class="swal-form-container">
+                <div class="input-group">
+                    <label>รหัสผ่านปัจจุบัน</label>
+                    <div class="input-wrapper">
+                        <input id="current-pw" class="swal2-input custom-input" type="password" placeholder="••••••••">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>รหัสผ่านใหม่</label>
+                    <div class="input-wrapper">
+                        <input id="new-pw" class="swal2-input custom-input" type="password" placeholder="6 ตัวขึ้นไป">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>ยืนยันรหัสใหม่</label>
+                    <div class="input-wrapper">
+                        <input id="confirm-pw" class="swal2-input custom-input" type="password" placeholder="พิมพ์อีกครั้ง">
+                        <div id="match-icon-container" class="status-icon-box"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <style>
+                .swal-form-container { margin-top: 15px; }
+                .input-group { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 15px; width: 100%; }
+                .input-group label { font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 6px; margin-left: 4px; }
+                .input-wrapper { position: relative; width: 100%; }
+                .input-group label { 
+                font-size: 15px; /* 🔥 เดิมเป็น 13px ลองปรับเป็น 15px หรือ 16px ตามใจชอบ */
+                font-weight: 600; /* หากต้องการให้ตัวหนาขึ้นอีก เปลี่ยนจาก 500 เป็น 600 */
+                color: #4b5563; 
+                margin-bottom: 6px; 
+                margin-left: 4px; 
+            }
+                .input-group { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: flex-start; 
+                margin-bottom: 20px; /* 🔥 เดิมเป็น 15px เพิ่มเป็น 20px เพื่อไม่ให้แต่ละช่องเบียดกัน */
+                width: 100%; 
+            }
+    
+                .custom-input {
+                    height: 42px !important; margin: 0 !important; width: 100% !important;
+                    font-size: 14px !important; border-radius: 10px !important;
+                    border: 1px solid #e5e7eb !important; transition: all 0.2s !important;
+                    padding-right: 40px !important;
+                }
+
+                /* สไตล์เมื่อเกิด Error (กรอบแดง) */
+                .input-error { border-color: #f43f5e !important; background-color: #fff1f2 !important; }
+
+                /* คอนเทนเนอร์ไอคอนสไตล์ KPI */
+                .status-icon-box {
+                    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+                    border-radius: 50%; transition: all 0.3s ease;
+                }
+
+                /* สีไอคอนกรณีผ่าน (เช็คอินแล้ว - Emerald) */
+                .icon-success { background-color: #d1fae5; color: #059669; }
+                
+                /* สีไอคอนกรณีผิด (ยกเลิก - Rose) */
+                .icon-error { background-color: #ffe4e6; color: #e11d48; }
+
+                .swal2-validation-message {
+                    background: transparent !important; color: #e11d48 !important;
+                    font-size: 12px !important; margin-top: 10px !important; border: none !important;
+                }
+            </style>
+        `,
+            didOpen: () => {
+                const newPw = document.getElementById('new-pw');
+                const confirm = document.getElementById('confirm-pw');
+                const iconBox = document.getElementById('match-icon-container');
+
+                // SVG Icons (หน้าตาเดียวกับ FiCheckCircle และ FiXCircle)
+                const checkIcon = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" height="14" width="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+                const crossIcon = `<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" height="14" width="14"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+
+                const validate = () => {
+                    const val1 = newPw.value;
+                    const val2 = confirm.value;
+
+                    if (val2 && val1 !== val2) {
+                        confirm.classList.add('input-error');
+                        iconBox.className = 'status-icon-box icon-error';
+                        iconBox.innerHTML = crossIcon;
+                    } else if (val2 && val1 === val2) {
+                        confirm.classList.remove('input-error');
+                        iconBox.className = 'status-icon-box icon-success';
+                        iconBox.innerHTML = checkIcon;
+                    } else {
+                        confirm.classList.remove('input-error');
+                        iconBox.innerHTML = '';
+                        iconBox.className = 'status-icon-box';
+                    }
+                };
+
+                newPw.addEventListener('input', validate);
+                confirm.addEventListener('input', validate);
+            },
+            preConfirm: async () => {
+                const current = document.getElementById('current-pw').value;
+                const newPw = document.getElementById('new-pw').value;
+                const confirm = document.getElementById('confirm-pw').value;
+
+                if (!current) {
+                    document.getElementById('current-pw').classList.add('input-error');
+                    return Swal.showValidationMessage('กรุณากรอกรหัสผ่านปัจจุบัน');
+                }
+                if (newPw.length < 6) return Swal.showValidationMessage('รหัสผ่านใหม่ต้องมี 6 ตัวขึ้นไป');
+                if (newPw !== confirm) return Swal.showValidationMessage('รหัสผ่านใหม่กับยืนยันไม่ตรงกัน');
+
+                try {
+                    const res = await adminChangePassword(current, newPw);
+                    if (!res.ok) {
+                        document.getElementById('current-pw').classList.add('input-error');
+                        return Swal.showValidationMessage(res.message || 'รหัสผ่านปัจจุบันไม่ถูกต้อง');
+                    }
+                    return res;
+                } catch (error) {
+                    return Swal.showValidationMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+                }
+            },
+            // ... (ปุ่มกดยืนยันสี emerald-600 เหมือนเดิม)
+            confirmButtonColor: '#059669',
+            confirmButtonText: 'อัปเดตรหัสผ่าน',
+            showLoaderOnConfirm: true,
+            showCloseButton: true,
+            cancelButtonText: 'ยกเลิก',
+            showCancelButton: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Toast.fire({ icon: 'success', title: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว' });
+            }
+        });
+    };
+
+    const handleForgotPassword = async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'กู้คืนรหัสผ่าน เจ้าหน้าที่',
+            // icon: 'info',
+            html: `
+            <div class="swal-form-container">
+                <div class="text-[12px] text-gray-500 mb-4 text-center">
+                    ติดต่อฝ่ายสารสนเทศ หรือ กู้คืนด้วย Master Key
+                </div>
+
+                <div class="input-group">
+                    <label>Master Recovery Key</label>
+                    <input id="recovery-key" class="swal2-input custom-input" type="text" placeholder="กรอกรหัสยืนยัน 16 หลัก">
+                </div>
+                <hr class="my-4 border-dashed border-gray-200">
+                <div class="input-group">
+                    <label>รหัสผ่านใหม่</label>
+                    <input id="reset-new-pw" class="swal2-input custom-input" type="password" placeholder="6 ตัวขึ้นไป">
+                </div>
+            </div>
+            
+            <styl>
+                .custom-input { 
+                    height: 42px !important; 
+                    margin: 0 !important; 
+                    width: 100% !important; 
+                    border-radius: 10px !important; 
+                    font-size: 14px !important; 
+                    border: 1px solid #e5e7eb !important; 
+                }
+                .input-group { 
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: flex-start; 
+                    margin-bottom: 10px; 
+                    width: 100%; 
+                }
+                .input-group label { 
+                    font-size: 15px; 
+                    font-weight: 500; 
+                    color: #4b5563; 
+                    margin-bottom: 5px; 
+                }
+
+                /* 🔥 จุดที่แก้: ปรับแต่งหน้าตาของ Validation Message (Error) */
+                .swal2-validation-message {
+                    background: transparent !important; /* ลบพื้นหลังเทาออก */
+                    color: #e11d48 !important;        /* เปลี่ยนสีเป็นสีแดง rose-600 */
+                    font-size: 12px !important;         /* ปรับตัวอักษรให้เล็กลง */
+                    border: none !important;            /* ลบเส้นขอบออก */
+                    box-shadow: none !important;        /* ลบเงาออก */
+                    margin-top: 10px !important;
+                    justify-content: center !important;
+                }
+                .swal2-icon {
+                    width: 40px !important;    /* ปรับความกว้าง (ปกติจะประมาณ 80px) */
+                    height: 40px !important;   /* ปรับความสูง */
+                    // margin: 20px auto !important; /* ปรับระยะห่างบน-ล่าง */
+                    // margin-top: 10px !important;
+                    margin-bottom: 10px !important;
+                }
+
+                /* ปรับขนาดตัวอักษรหรือเครื่องหมายข้างในไอคอน (เช่น ตัว i หรือเครื่องหมาย ?) */
+                .swal2-icon .swal2-icon-content {
+                    font-size: 24px !important; 
+                }
+                // .swal2-title {
+                //     font-size: 32px !important;
+                //     font-weight: 600 !important;
+                // }
+                
+            </style>
+        `,
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันเปลี่ยนรหัส',
+            confirmButtonColor: '#059669', // สีเขียว Emerald
+            cancelButtonText: 'ยกเลิก',
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+                const recoveryKey = document.getElementById('recovery-key').value;
+                const newPw = document.getElementById('reset-new-pw').value;
+
+                if (!recoveryKey || !newPw) return Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบ');
+                if (newPw.length < 6) return Swal.showValidationMessage('รหัสใหม่ต้องมี 6 ตัวขึ้นไป');
+
+                try {
+                    // เราจะสร้าง API ใหม่ชื่อ reset-password
+                    const res = await fetch('/api/admin/reset-password', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recoveryKey, newPw })
+                    });
+                    const data = await res.json();
+                    if (!data.ok) return Swal.showValidationMessage(data.message || 'Recovery Key ไม่ถูกต้อง');
+                    return data;
+                } catch (error) {
+                    return Swal.showValidationMessage('การเชื่อมต่อล้มเหลว');
+                }
+            }
+        });
+
+        if (formValues) {
+            Toast.fire({ icon: 'success', title: 'เปลี่ยนรหัสผ่านใหม่เรียบร้อย!' });
+        }
+    };
+
+    const handleCopy = (text, label) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        Toast.fire({
+            icon: 'success',
+            title: `คัดลอก ${text} เรียบร้อยแล้ว`,
+            timer: 1500,
+
+        });
+
+    };
+
+    const handleExportExcel = () => {
+        if (filteredBookings.length === 0) {
+            return Swal.fire("แจ้งเตือน", "ไม่มีข้อมูลสำหรับการส่งออก", "warning");
+        }
+
+        // 1. เตรียมข้อมูลที่จะใส่ใน Excel (เลือกเฉพาะฟิลด์ที่ต้องการ)
+        const dataToExport = filteredBookings.map((b, index) => ({
+            "ลำดับ": index + 1,
+            "วันที่จอง": b.date,
+            "รอบเวลา": b.slot,
+            "ชื่อ-นามสกุล": b.name,
+            "เบอร์โทรศัพท์": b.phone,
+            "รหัสการจอง": b.code,
+            "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
+                b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
+        }));
+
+        // 2. สร้าง Worksheet
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        // 3. กำหนดความกว้างของคอลัมน์เพื่อให้ดูสวยงาม
+        const wscols = [
+            { wch: 6 },  // ลำดับ
+            { wch: 12 }, // วันที่
+            { wch: 15 }, // รอบเวลา
+            { wch: 25 }, // ชื่อ
+            { wch: 15 }, // เบอร์โทร
+            { wch: 15 }, // รหัส
+            { wch: 15 }  // สถานะ
+        ];
+        worksheet['!cols'] = wscols;
+
+        // 4. สร้าง Workbook และบันทึกไฟล์
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจอง");
+
+        // ตั้งชื่อไฟล์ตามวันที่ที่เลือก
+        XLSX.writeFile(workbook, `Booking_Report_${date}.xlsx`);
+
+        Toast.fire({
+            icon: 'success',
+            title: 'ส่งออกไฟล์ Excel สำเร็จ'
+        });
+    };
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap'); .font-sans { font-family: 'Prompt', sans-serif; }`}</style>
@@ -621,7 +1071,7 @@ export default function AdminPage() {
             <nav className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold">
-                        <FiActivity size={24} /> <span className="hidden sm:inline">ระบบจัดการคิว</span>
+                        <FiActivity size={24} /> <span className="hidden sm:inline">ระบบจัดการ</span>
                     </div>
                     {isAuthed && (
                         <div className="flex items-center gap-3">
@@ -629,6 +1079,13 @@ export default function AdminPage() {
                                 <button onClick={() => setActiveTab("dashboard")} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>แดชบอร์ด</button>
                                 <button onClick={() => setActiveTab("scan")} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'scan' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>สแกน</button>
                             </div>
+                            <button
+                                onClick={handleChangePassword}
+                                className="text-xs flex items-center gap-1 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg font-medium transition-colors"
+                                title="เปลี่ยนรหัสผ่าน"
+                            >
+                                <FiLock /> <span className="hidden md:inline">เปลี่ยนรหัส</span>
+                            </button>
                             <button onClick={handleLogout} className="text-xs flex items-center gap-1 text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-2 rounded-lg font-medium"><FiLogOut /></button>
                         </div>
                     )}
@@ -648,6 +1105,15 @@ export default function AdminPage() {
                                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg flex justify-center items-center gap-2">
                                 {loginLoading && <FiLoader className="animate-spin" />} {loginLoading ? "กำลังตรวจสอบ..." : "เข้าสู่ระบบ"}
                             </button>
+
+                            <div className="text-center">
+                                <button
+                                    onClick={handleForgotPassword}
+                                    className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+                                >
+                                    ลืมรหัสผ่าน ?
+                                </button>
+                            </div>
                         </form>
                     </div>
                 ) : activeTab === "dashboard" ? (
@@ -663,33 +1129,71 @@ export default function AdminPage() {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">ทั้งหมด</p><p className="text-xl font-bold text-gray-900">{kpiStats.total}</p></div><FiUsers className="text-gray-300 text-2xl" /></div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">รอรับบริการ</p><p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p></div><FiClock className="text-yellow-200 text-2xl" /></div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">เช็คอิน</p><p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p></div><FiCheckCircle className="text-emerald-200 text-2xl" /></div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"><div><p className="text-xs text-gray-500">ยกเลิก</p><p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p></div><FiXCircle className="text-rose-200 text-2xl" /></div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-gray-500">ทั้งหมด</p>
+                                    <p className="text-xl font-bold text-gray-900">{kpiStats.total}</p>
+                                </div>
+                                <FiUsers className="text-gray-300 text-2xl" />
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-gray-500">รอรับบริการ</p>
+                                    <p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p>
+                                </div>
+                                <FiClock className="text-yellow-200 text-2xl" />
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-gray-500">เช็คอิน</p>
+                                    <p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p>
+                                </div>
+                                <FiCheckCircle className="text-emerald-200 text-2xl" />
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs text-gray-500">ยกเลิก</p>
+                                    <p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p>
+                                </div>
+                                <FiXCircle className="text-rose-200 text-2xl" />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiBarChart2 /> สถิติการจองวันนี้</h3>
+                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                    <FiBarChart2 /> สถิติการจองวันนี้
+                                </h3>
                                 <div className="h-[250px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={chartData}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" fontSize={12} tick={{ fontSize: 10 }} />
-                                            <YAxis allowDecimals={false} fontSize={12} />
-                                            <Tooltip cursor={{ fill: '#f0fdf4' }} contentStyle={{ borderRadius: '8px' }} labelStyle={{ color: '#064e3b', fontWeight: 'bold' }} />
+                                            <XAxis dataKey="name"
+                                                fontSize={12}
+                                                tick={{ fontSize: 10 }} />
+                                            <YAxis allowDecimals={false}
+                                                fontSize={12} />
+                                            <Tooltip cursor={{ fill: '#f0fdf4' }}
+                                                contentStyle={{ borderRadius: '8px' }}
+                                                labelStyle={{
+                                                    color: '#064e3b',
+                                                    fontWeight: 'bold'
+                                                }} />
                                             <Bar dataKey="count" name="จำนวน" fill="#059669" radius={[4, 4, 0, 0]} barSize={40} activeBar={{ fill: '#047857' }} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
                             <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiPieChart /> สัดส่วนสถานะ</h3>
+                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                    <FiPieChart /> สัดส่วนสถานะ
+                                </h3>
                                 <div className="h-[250px] w-full flex justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                                            <Pie data={pieData} cx="50%" cy="50%"
+                                                innerRadius={50} outerRadius={80}
+                                                paddingAngle={5} dataKey="value">
                                                 {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                             </Pie>
                                             <Tooltip />
@@ -701,39 +1205,172 @@ export default function AdminPage() {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                            <div className="lg:col-span-8 flex flex-col h-[600px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+                            <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
                                 <div className="p-4 border-b border-gray-100 flex gap-3 bg-gray-50/50">
-                                    <input type="text" placeholder="ค้นหา..." className="text-gray-900 placeholder:text-gray-400 flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                                    <select className="placeholder:text-gray-400 text-gray-900 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none cursor-pointer" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                                        <option value="ALL">ทุกสถานะ</option><option value="BOOKED">รอรับบริการ</option><option value="CHECKED_IN">เช็คอินแล้ว</option><option value="CANCELLED">ยกเลิกแล้ว</option>
-                                    </select>
+                                    {/* <div className="flex gap-3 flex-1">
+                                        <input type="text" placeholder="ค้นหา..." className="text-gray-900 placeholder:text-gray-400 flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                        <select
+                                            // className="placeholder:text-gray-400 text-gray-900 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none cursor-pointer" 
+                                            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"
+
+                                            value={filterStatus}
+                                            onChange={e => setFilterStatus(e.target.value)}>
+                                            <option value="ALL">ทุกสถานะ</option>
+                                            <option value="BOOKED">รอรับบริการ</option>
+                                            <option value="CHECKED_IN">เช็คอินแล้ว</option>
+                                            <option value="CANCELLED">ยกเลิกแล้ว</option>
+                                        </select>
+                                    </div> */}
+                                    <div className="flex flex-wrap md:flex-nowrap gap-3 flex-1">
+                                        {/* 1. ช่องค้นหา - ปรับขนาดใหญ่ขึ้น */}
+                                        <div className="relative flex-1 group">
+                                            <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                                                <FiSearch className="text-gray-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="ค้นหาชื่อ, เบอร์โทร หรือรหัสจอง..."
+                                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* 2. Dropdown เลือกสถานะ - ปรับขนาดใหญ่ขึ้นให้เท่ากับ Input */}
+                                        <div className="relative w-full md:w-[110px] group">
+                                            <select
+                                                className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center"
+                                                value={filterStatus}
+                                                onChange={e => setFilterStatus(e.target.value)}
+                                            >
+                                                <option value="ALL">ทั้งหมด</option>
+                                                <option value="BOOKED">รอรับบริการ</option>
+                                                <option value="CHECKED_IN">เช็คอินแล้ว</option>
+                                                <option value="CANCELLED">ยกเลิกแล้ว</option>
+                                            </select>
+                                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
+                                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleExportExcel}
+                                            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"
+                                        >
+                                            <FiFileText className="text-emerald-500 text-sm" /> Export Excel
+                                            {/* <FiFileText className="text-emerald-600" />
+                                            <span>Export Excel</span> */}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex-1 overflow-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
                                             <tr>
                                                 <th className="px-4 py-3">เวลา</th>
-                                                <th className="px-4 py-3">ชื่อ-สกุล / รหัส</th>
+                                                <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
                                                 <th className="px-4 py-3">เบอร์โทร</th>
                                                 <th className="px-4 py-3">สถานะ</th>
                                                 <th className="px-4 py-3 text-right">จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm divide-y divide-gray-50">
-                                            {filteredBookings.map((b, i) => (
-                                                <tr key={i} className="hover:bg-emerald-50/30">
-                                                    <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="font-bold text-gray-800">{b.name}</div>
-                                                        <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{b.code}</div>
-                                                    </td>
-                                                    <td className="px-4 py-3 font-mono text-gray-600 text-xs">{b.phone}</td>
-                                                    <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
+                                            {filteredBookings.length > 0 ? (
+                                                filteredBookings.map((b, i) => (
+                                                    <tr key={i} className="hover:bg-emerald-50/30">
+                                                        <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
+                                                        <td className="px-4 py-3">
+
+                                                            {/* <div className="font-bold text-gray-800">{b.name}</div> */}
+                                                            {/* <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-gray-800">{b.name}</span>
+                                                                <button
+                                                                    onClick={() => handleCopy(b.name, "ชื่อ")}
+                                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-emerald-600 transition-all"
+                                                                    title="คัดลอกชื่อ"
+                                                                >
+                                                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M8 17.7L8 19.2C8 20.3 8.9 21.2 10 21.2L20.5 21.2C21.6 21.2 22.5 20.3 22.5 19.2L22.5 8.7C22.5 7.6 21.6 6.7 20.5 6.7L19 6.7M14 14.8L14 3.3C14 2.2 13.1 1.3 12 1.3L1.5 1.3C0.4 1.3 -0.5 2.2 -0.5 3.3L-0.5 14.8C-0.5 15.9 0.4 16.8 1.5 16.8L12 16.8C13.1 16.8 14 15.9 14 14.8Z"></path></svg>
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{b.code}</div> */}
+
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-1.5 group/name">
+                                                                    <span className="font-bold text-gray-800">{b.name}</span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(b.name, "ชื่อ")}
+                                                                        className="text-gray-300 hover:text-emerald-600 transition-colors"
+                                                                        title="คัดลอกชื่อ"
+                                                                    >
+                                                                        <FiCopy size={13} />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 mt-0.5 group/code">
+                                                                    <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(b.code, "รหัสจอง")}
+                                                                        className="text-gray-300 hover:text-emerald-500 transition-colors"
+                                                                        title="คัดลอกรหัส"
+                                                                    >
+                                                                        <FiCopy size={10} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </td>
+                                                        {/* <td className="px-4 py-3 font-mono text-gray-600 text-xs">{b.phone}</td> */}
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-1.5 group/phone">
+                                                                <span className="font-mono text-gray-600 text-xs">{b.phone}</span>
+                                                                <button
+                                                                    onClick={() => handleCopy(b.phone, "เบอร์โทร")}
+                                                                    className="text-gray-300 hover:text-blue-500 transition-colors"
+                                                                    title="คัดลอกเบอร์โทร"
+                                                                >
+                                                                    <FiCopy size={12} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                // <tr>
+                                                //     <td colSpan="5" className="px-4 py-20 text-center">
+                                                //         <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
+                                                //             <FiSearch size={40} className="opacity-20" />
+                                                //             <p className="text-sm font-medium">ไม่พบข้อมูลการจองที่ค้นหา</p>
+                                                //             <p className="text-xs opacity-60">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
+                                                //         </div>
+                                                //     </td>
+                                                // </tr>
+                                                <tr>
+                                                    <td colSpan="5" className="p-0">
+
+                                                        <div className="flex flex-col items-center justify-center h-[450px] text-gray-400 gap-3">
+                                                            <div className="p-4 bg-gray-50 rounded-full">
+                                                                <FiSearch size={48} className="opacity-20" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <p className="text-base font-semibold text-gray-500">ไม่พบข้อมูลที่ค้นหา</p>
+                                                                <p className="text-xs opacity-60">ตรวจสอบคำสะกด หรือเปลี่ยนตัวกรองสถานะใหม่</p>
+                                                            </div>
+                                                            {/* ปุ่มสำหรับล้างการค้นหา (Option เสริม) */}
+                                                            <button
+                                                                onClick={() => { setSearchTerm(""); setFilterStatus("ALL"); }}
+                                                                className="mt-2 text-xs text-emerald-600 hover:underline font-medium"
+                                                            >
+                                                                ล้างตัวกรองทั้งหมด
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -743,11 +1380,9 @@ export default function AdminPage() {
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                                     <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> จัดการวันเปิดให้บริการ</h3>
                                     <div className="flex gap-2 mb-4">
-                                        {/* <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} 
-                                            placeholder="เลือกวันที่" 
-                                            className="text-gray-900 flex-1 border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-1 ring-emerald-500" /> */}
+                                        {/* 1. กล่องใส่วันที่ */}
                                         <div className="relative flex-1 border border-gray-200 rounded-lg bg-white focus-within:ring-1 focus-within:ring-emerald-500 overflow-hidden">
-                                            {/* 1. ตัว Input: ปรับให้เต็มพื้นที่ และลบเส้นขอบตัวเองออก (เพราะใช้ขอบของ div แม่แทน) */}
+
                                             <input
                                                 type="date"
                                                 value={newDate}
@@ -778,11 +1413,12 @@ export default function AdminPage() {
                                             {addingDate ? <FiLoader className="animate-spin" /> : <FiPlus />} {addingDate ? "..." : "เพิ่มวันที่"}
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                                    {/* <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1" > */}
+                                    <div className="grid grid-cols-2 gap-2 max-h-[155px] overflow-y-auto pr-1 ">
                                         {manageDates.length > 0 ? manageDates.map((item) => (
                                             <div
                                                 key={item.date}
-                                                className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all ${item.status === "OPEN"
+                                                className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all h-[45px] ${item.status === "OPEN"
                                                     ? "bg-emerald-50 border-emerald-200"
                                                     : "bg-gray-50 border-gray-200 opacity-75"
                                                     }`}
@@ -810,32 +1446,8 @@ export default function AdminPage() {
                                     </div>
                                 </div>
 
-                                {/* <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
-                                    <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                                        <FiLayers className="text-blue-600" /> จัดการคิว ({Array.isArray(slots) ? slots.length : 0})
-                                    </h3>
-                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                                        {Array.isArray(slots) && slots.length > 0 ? (
-                                            slots.map((s) => (
-                                                <div key={s.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-bold text-xs text-gray-700">{s.label}</span>
-                                                        <button onClick={() => handleEditCapacity(s)} className="text-gray-400 hover:text-emerald-600"><FiEdit2 size={12} /></button>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                                        <div className={`h-full rounded-full ${s.remaining === 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${(s.booked / s.capacity) * 100}%` }}></div>
-                                                    </div>
-                                                    <div className="flex justify-between text-[10px] text-gray-500">
-                                                        <span>จอง {s.booked}/{s.capacity}</span>
-                                                        <span>{s.remaining === 0 ? 'เต็ม' : 'ว่าง ' + s.remaining}</span>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center text-gray-400 text-xs mt-10"><p>ไม่พบข้อมูลรอบเวลา</p><p className="opacity-50">(หรือกำลังโหลด...)</p></div>
-                                        )}
-                                    </div>
-                                </div> */}
+
+
                                 {/* ส่วนแสดงผลจัดการคิว */}
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
                                     <div className="flex justify-between items-center mb-4">
@@ -853,7 +1465,7 @@ export default function AdminPage() {
                                             onClick={handleAddSlot}
                                             className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-sm"
                                         >
-                                            <FiPlus /> เพิ่มรอบ
+                                            <FiPlus /> เพิ่ม
                                         </button>
                                     </div>
 
@@ -862,7 +1474,7 @@ export default function AdminPage() {
                                             slots.map((s) => (
                                                 <div key={s.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-2 group hover:border-emerald-200 transition-colors">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="font-bold text-xs text-gray-700">{s.label}</span>
+                                                        <span className="font-bold text-sm text-gray-700">{s.label}</span>
                                                         <div className="flex gap-1">
                                                             {/* ปุ่มแก้ไข */}
                                                             <button
@@ -884,12 +1496,21 @@ export default function AdminPage() {
                                                     </div>
                                                     {/* Progress Bar */}
                                                     <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                                        <div
+                                                        {/* <div
                                                             className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                            style={{ width: `${(s.booked / s.capacity) * 100}%` }}
+                                                        ></div> */}
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0
+                                                                ? 'bg-rose-500' // สีแดงเมื่อเต็ม
+                                                                : (s.booked / s.capacity) >= 0.6
+                                                                    ? 'bg-orange-500' // 🔥 สีส้มเมื่อจองเกิน 80%
+                                                                    : 'bg-emerald-500' // สีเขียวปกติ
+                                                                }`}
                                                             style={{ width: `${(s.booked / s.capacity) * 100}%` }}
                                                         ></div>
                                                     </div>
-                                                    <div className="flex justify-between text-[10px] text-gray-500">
+                                                    <div className="flex justify-between text-[11px] text-gray-500">
                                                         <span>จอง {s.booked}/{s.capacity}</span>
                                                         <span>{s.remaining === 0 ? 'เต็ม' : 'ว่าง ' + s.remaining}</span>
                                                     </div>

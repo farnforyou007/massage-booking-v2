@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* เลือกจัดการเฉพาะส่วนที่มีการ scroll ในจัดการวัน */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* ความกว้างของแถบเลื่อน */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1; /* สีพื้นหลังของรางเลื่อน */
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888; /* สีของตัวเลื่อน (ในรูปจะเป็นสีเทาเข้ม) */
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555; /* สีเมื่อเอาเมาส์ไปวาง */
+}

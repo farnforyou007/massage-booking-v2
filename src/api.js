@@ -147,3 +147,12 @@ export async function updateSlot(id, label, capacity) {
     });
     return await res.json();
 }
+
+export async function adminChangePassword(currentPassword, newPassword) {
+    const res = await fetch(`${API_BASE}/api/admin/change-password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword })
+    });
+    return await res.json();
+}

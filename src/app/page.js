@@ -212,10 +212,10 @@ export default function Home() {
       .channel('realtime-bookings')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings' }, 
+        { event: '*', schema: 'public', table: 'bookings' },
         () => {
           console.log('มีคนจอง/ยกเลิก! อัปเดตที่ว่างด่วน...');
-          fetchSlots(); 
+          fetchSlots();
         }
       )
       .subscribe();
@@ -247,94 +247,6 @@ export default function Home() {
   };
 
   // --- 3. Handle Submit ---
-  // --- 3. Handle Submit (แก้ไขใหม่ให้ยิงไป API) ---
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   // Validation พื้นฐาน (เหมือนเดิม)
-  //   if (!date || !slotId || !name.trim() || !phone.trim()) {
-  //     setMessage({ text: "กรุณากรอกข้อมูลให้ครบทุกช่อง", ok: false });
-  //     return;
-  //   }
-  //   if (phone.length < 9) {
-  //     await Swal.fire("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์มือถือให้ถูกต้อง", "warning");
-  //     return;
-  //   }
-
-  //   // หาชื่อรอบเวลา (เหมือนเดิม)
-  //   const selectedSlot = slots.find((s) => s.id === slotId);
-
-  //   // Confirm Dialog (เหมือนเดิม)
-  //   const result = await Swal.fire({
-  //     title: "ยืนยันการจอง?",
-  //     html: `
-  //               <div class="text-left text-sm p-4 bg-gray-50 rounded-lg border border-gray-200">
-  //                   <p class="mb-1"><strong>วันที่:</strong> <span class="text-emerald-700">${formatFullThaiDate(date)}</span></p>
-  //                   <p class="mb-1"><strong>เวลา:</strong> <span class="text-emerald-700">${selectedSlot?.label}</span></p>
-  //                   <p class="mb-1"><strong>ชื่อ:</strong> ${name}</p>
-  //                   <p><strong>เบอร์โทร:</strong> ${phone}</p>
-  //               </div>
-  //           `,
-  //     icon: "question",
-  //     showCancelButton: true,
-  //     confirmButtonText: "ยืนยันการจอง",
-  //     cancelButtonText: "แก้ไข",
-  //     confirmButtonColor: "#047857",
-  //   });
-
-  //   if (!result.isConfirmed) return;
-
-  //   setIsSubmitting(true);
-  //   setMessage({ text: "กำลังบันทึกข้อมูล...", ok: true });
-
-  //   try {
-  //     // 🔥 เปลี่ยนตรงนี้! ยิงไปหา API แทนการ insert เอง
-  //     const response = await fetch('/api/booking', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         name: name,
-  //         phone: phone,
-  //         date: date,
-  //         slotId: selectedSlot.id,
-  //         slotLabel: selectedSlot.label,
-  //         lineUserId: lineUserId
-  //       })
-  //     });
-
-  //     const result = await response.json();
-
-  //     if (!result.ok) {
-  //       // ถ้า API ตอบกลับมาว่าไม่ผ่าน (เช่น จองซ้ำ หรือ เต็ม)
-  //       throw new Error(result.message);
-  //     }
-
-  //     // ถ้าสำเร็จ
-  //     setBookingCode(result.bookingCode);
-  //     setTicketUrl(result.bookingCode); // หรือ URL จริงถ้ามี
-  //     setMessage({ text: "จองสำเร็จเรียบร้อย!", ok: true });
-
-  //     await Swal.fire({
-  //       icon: "success",
-  //       title: "จองคิวสำเร็จ!",
-  //       html: `รหัสจอง: <b class="text-emerald-600 text-xl">${result.bookingCode}</b><br/><span class="text-sm text-gray-500">กรุณาแคปหน้าจอไว้เป็นหลักฐาน</span>`,
-  //       timer: 5000,
-  //       showConfirmButton: true,
-  //       confirmButtonText: "ตกลง"
-  //     });
-
-  //   } catch (err) {
-  //     // แจ้งเตือน Error ที่ได้จาก API
-  //     setMessage({ text: err.message, ok: false });
-  //     Swal.fire({
-  //       icon: 'error',
-  //       title: 'จองไม่สำเร็จ',
-  //       text: err.message
-  //     });
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -424,6 +336,8 @@ export default function Home() {
       setIsSubmitting(false);
     }
   };
+
+  
 
   // --- Render UI (เหมือนของเก่าเป๊ะ) ---
   return (
