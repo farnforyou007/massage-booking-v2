@@ -133,8 +133,13 @@ export default function Home() {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-          setLineDisplayName(profile.displayName);
+          // setLineUserId(profile.userId);
+          // setLineDisplayName(profile.displayName);
+          setUserProfile({
+            userId: profile.userId,
+            displayName: profile.displayName,
+            pictureUrl: profile.pictureUrl // 🔥 นี่คือตัวที่เราต้องการ
+          });
           console.log("LINE Login Success:", profile.userId);
         } else {
           liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
@@ -296,7 +301,8 @@ export default function Home() {
         date, slot_id: slotId, slotLabel: selectedSlot?.label,
         name: name.trim(),
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
-        lineUserId: lineUserId || "NO_LIFF"
+        lineUserId: lineUserId || "NO_LIFF",
+        line_picture_url: userProfile.pictureUrl
       });
 
       if (!res.ok) throw new Error(res.message);
@@ -337,7 +343,7 @@ export default function Home() {
     }
   };
 
-  
+
 
   // --- Render UI (เหมือนของเก่าเป๊ะ) ---
   return (

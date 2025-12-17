@@ -28,7 +28,7 @@ import {
     FiCheckCircle, FiXCircle, FiActivity, FiEdit2, FiLogOut,
     FiLayers, FiUsers, FiSearch, FiCheckSquare,
     FiCamera, FiImage, FiAlertTriangle, FiCameraOff, FiPlus, FiTrash2, FiPieChart, FiBarChart2,
-    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText
+    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText, FiUser
 } from "react-icons/fi";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -188,7 +188,8 @@ export default function AdminPage() {
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "ยืนยัน",
-            confirmButtonColor: newStatus === "CHECKED_IN" ? "#059669" : "#dc2626"
+            confirmButtonColor: newStatus === "CHECKED_IN" ? "#059669" : "#dc2626",
+            cancelButtonText: "ยกเลิก",
         });
 
         if (!result.isConfirmed) return;
@@ -1284,8 +1285,8 @@ export default function AdminPage() {
                                                         <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
                                                         {/* <td className="px-4 py-3"> */}
 
-                                                            {/* <div className="font-bold text-gray-800">{b.name}</div> */}
-                                                            {/* <div className="flex items-center gap-2">
+                                                        {/* <div className="font-bold text-gray-800">{b.name}</div> */}
+                                                        {/* <div className="flex items-center gap-2">
                                                                 <span className="font-bold text-gray-800">{b.name}</span>
                                                                 <button
                                                                     onClick={() => handleCopy(b.name, "ชื่อ")}
@@ -1298,28 +1299,28 @@ export default function AdminPage() {
 
                                                             <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{b.code}</div> */}
 
-                                                            <td className="px-4 py-3">
-                                                                <div className="flex items-center gap-1.5 group/name">
-                                                                    <span className="font-bold text-gray-800">{b.name}</span>
-                                                                    <button
-                                                                        onClick={() => handleCopy(b.name, "ชื่อ")}
-                                                                        className="text-gray-300 hover:text-emerald-600 transition-colors"
-                                                                        title="คัดลอกชื่อ"
-                                                                    >
-                                                                        <FiCopy size={13} />
-                                                                    </button>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5 mt-0.5 group/code">
-                                                                    <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
-                                                                    <button
-                                                                        onClick={() => handleCopy(b.code, "รหัสจอง")}
-                                                                        className="text-gray-300 hover:text-emerald-500 transition-colors"
-                                                                        title="คัดลอกรหัส"
-                                                                    >
-                                                                        <FiCopy size={10} />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-1.5 group/name">
+                                                                <span className="font-bold text-gray-800">{b.name}</span>
+                                                                <button
+                                                                    onClick={() => handleCopy(b.name, "ชื่อ")}
+                                                                    className="text-gray-300 hover:text-emerald-600 transition-colors"
+                                                                    title="คัดลอกชื่อ"
+                                                                >
+                                                                    <FiCopy size={13} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 mt-0.5 group/code">
+                                                                <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
+                                                                <button
+                                                                    onClick={() => handleCopy(b.code, "รหัสจอง")}
+                                                                    className="text-gray-300 hover:text-emerald-500 transition-colors"
+                                                                    title="คัดลอกรหัส"
+                                                                >
+                                                                    <FiCopy size={10} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
                                                         {/* </td> */}
                                                         {/* <td className="px-4 py-3 font-mono text-gray-600 text-xs">{b.phone}</td> */}
                                                         <td className="px-4 py-3">
@@ -1565,43 +1566,147 @@ export default function AdminPage() {
                                 </div>
                             </>
                         ) : (
-                            <div className="bg-white rounded-3xl shadow-xl border border-emerald-100 overflow-hidden">
-                                <div className="bg-emerald-50 p-6 border-b border-emerald-100 text-center relative">
-                                    <button onClick={handleResetScan} className="absolute top-4 right-4 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full"><FiRefreshCw /></button>
-                                    <div className="inline-block p-3 bg-white rounded-full shadow-sm mb-2 text-3xl">
-                                        {scanData.status === "CHECKED_IN" ? <FiCheckCircle className="text-emerald-500" /> : scanData.status === "CANCELLED" ? <FiXCircle className="text-rose-500" /> : <FiClock className="text-yellow-500" />}
+                            // <div className="bg-white rounded-3xl shadow-xl border border-emerald-100 overflow-hidden">
+                            //     <div className="bg-emerald-50 p-6 border-b border-emerald-100 text-center relative">
+                            //         <button onClick={handleResetScan} className="absolute top-4 right-4 text-emerald-700 hover:bg-emerald-100 p-2 rounded-full"><FiRefreshCw /></button>
+                            //         <div className="inline-block p-3 bg-white rounded-full shadow-sm mb-2 text-3xl">
+                            //             {scanData.status === "CHECKED_IN" ? <FiCheckCircle className="text-emerald-500" /> : scanData.status === "CANCELLED" ? <FiXCircle className="text-rose-500" /> : <FiClock className="text-yellow-500" />}
+                            //         </div>
+
+                            //         <h2 className="text-xl font-bold text-emerald-900">{scanData.name}</h2>
+                            //         <p className="text-sm text-emerald-600 font-mono">{scanData.code}</p>
+                            //     </div>
+                            //     <div className="p-6 space-y-4">
+                            //         <div className="grid grid-cols-2 gap-4 text-sm">
+                            //             <div className="bg-stone-50 p-3 rounded-xl">
+                            //                 <p className="text-xs text-gray-900">วันที่</p>
+                            //                 <b className="text-gray-600">{scanData.date}</b>
+                            //             </div>
+                            //             <div className="bg-stone-50 p-3 rounded-xl">
+                            //                 <p className="text-xs text-gray-900">เวลา</p>
+                            //                 <b className="text-gray-600">{scanData.slot}</b>
+                            //             </div>
+                            //             <div className="col-span-2 bg-stone-50 p-3 rounded-xl">
+                            //                 <p className="text-xs text-gray-900">เบอร์โทร</p>
+                            //                 <b className="text-gray-600">{scanData.phone}</b>
+                            //             </div>
+                            //         </div>
+                            //         {scanData.status === "CHECKED_IN" && <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiCheckCircle /> รายการนี้เช็คอินไปแล้ว</div>}
+                            //         {scanData.status === "CANCELLED" && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiXCircle /> รายการนี้ถูกยกเลิก</div>}
+                            //         <hr className="border-dashed border-gray-200" />
+                            //         {scanData.status === "BOOKED" ? (
+                            //             <div className="space-y-3">
+                            //                 <button onClick={handleConfirmCheckIn} disabled={loading} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all active:scale-[0.98] disabled:opacity-50">
+                            //                     {loading ? "กำลังบันทึก..." : "ยืนยันเช็คอิน"}
+                            //                 </button>
+                            //             </div>
+                            //         ) : (
+                            //             <button onClick={handleResetScan} className="w-full py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold">สแกนรายการต่อไป</button>
+                            //         )}
+                            //     </div>
+                            // </div>
+                            <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden relative flex flex-col border border-emerald-100 animate-fade-in">
+                                {/* --- Header (เขียวเข้มสไตล์ Ticket) --- */}
+                                <div className="bg-emerald-800 p-8 text-white relative overflow-hidden flex-shrink-0 text-center">
+                                    {/* ลายกราฟิกจางๆ ด้านหลัง */}
+                                    <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4 pointer-events-none">
+                                        <FiActivity size={120} />
                                     </div>
 
-                                    <h2 className="text-xl font-bold text-emerald-900">{scanData.name}</h2>
-                                    <p className="text-sm text-emerald-600 font-mono">{scanData.code}</p>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="bg-stone-50 p-3 rounded-xl">
-                                            <p className="text-xs text-gray-900">วันที่</p>
-                                            <b className="text-gray-600">{scanData.date}</b>
+                                    <button onClick={handleResetScan} className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 p-2 rounded-full text-white/80 transition-all z-20">
+                                        <FiRefreshCw size={18} />
+                                    </button>
+
+                                    <div className="relative z-10 flex flex-col items-center">
+                                        {/* ✅ แสดงรูปโปรไฟล์ LINE */}
+                                        <div className="relative mb-4">
+                                            {scanData.line_picture_url ? (
+                                                <img
+                                                    src={scanData.line_picture_url}
+                                                    alt="LINE Profile"
+                                                    className="w-24 h-24 rounded-2xl border-4 border-white/20 object-cover shadow-2xl"
+                                                />
+                                            ) : (
+                                                <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                                                    <FiUser size={48} className="text-white/70" />
+                                                </div>
+                                            )}
+
+                                            {/* Badge สถานะที่มุมรูป */}
+                                            <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-lg border border-gray-50">
+                                                {scanData.status === "CHECKED_IN" ? <FiCheckCircle className="text-emerald-500" size={20} /> : scanData.status === "CANCELLED" ? <FiXCircle className="text-rose-500" size={20} /> : <FiClock className="text-yellow-500" size={20} />}
+                                            </div>
                                         </div>
-                                        <div className="bg-stone-50 p-3 rounded-xl">
-                                            <p className="text-xs text-gray-900">เวลา</p>
-                                            <b className="text-gray-600">{scanData.slot}</b>
-                                        </div>
-                                        <div className="col-span-2 bg-stone-50 p-3 rounded-xl">
-                                            <p className="text-xs text-gray-900">เบอร์โทร</p>
-                                            <b className="text-gray-600">{scanData.phone}</b>
+
+                                        <h2 className="text-2xl font-bold tracking-tight mb-1">{scanData.name}</h2>
+                                        <div className="bg-white/10 px-3 py-1 rounded-full border border-white/10">
+                                            <p className="text-emerald-100 text-xs font-mono tracking-widest">#{scanData.code}</p>
                                         </div>
                                     </div>
-                                    {scanData.status === "CHECKED_IN" && <div className="bg-blue-50 text-blue-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiCheckCircle /> รายการนี้เช็คอินไปแล้ว</div>}
-                                    {scanData.status === "CANCELLED" && <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-sm flex gap-2 items-center"><FiXCircle /> รายการนี้ถูกยกเลิก</div>}
-                                    <hr className="border-dashed border-gray-200" />
-                                    {scanData.status === "BOOKED" ? (
-                                        <div className="space-y-3">
-                                            <button onClick={handleConfirmCheckIn} disabled={loading} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all active:scale-[0.98] disabled:opacity-50">
-                                                {loading ? "กำลังบันทึก..." : "ยืนยันเช็คอิน"}
-                                            </button>
+                                </div>
+
+                                {/* --- Body Details --- */}
+                                <div className="p-8 space-y-6 bg-white relative">
+                                    {/* กราฟิก Notch รอยปรุเหมือนตั๋ว */}
+                                    <div className="absolute -top-3 left-0 right-0 flex justify-between px-6 pointer-events-none">
+                                        <div className="w-6 h-6 bg-emerald-800 rounded-full -ml-9"></div>
+                                        <div className="w-6 h-6 bg-emerald-800 rounded-full -mr-9"></div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] uppercase tracking-wider text-gray-400 font-bold">วันที่นัดหมาย</label>
+                                            <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm">
+                                                <FiCalendar className="text-emerald-500" /> {scanData.date}
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <button onClick={handleResetScan} className="w-full py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-bold">สแกนรายการต่อไป</button>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] uppercase tracking-wider text-gray-400 font-bold">เวลาที่จอง</label>
+                                            <div className="flex items-center gap-2 text-gray-800 font-semibold text-sm">
+                                                <FiClock className="text-emerald-500" /> {scanData.slot}
+                                            </div>
+                                        </div>
+                                        <div className="col-span-2 pt-2">
+                                            <label className="block text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+                                            <div className="flex items-center gap-2 text-gray-800 font-medium text-sm bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                <FiPhone className="text-emerald-500" /> {scanData.phone}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* --- แจ้งเตือนสถานะ (ถ้าเช็คอินหรือยกเลิกแล้ว) --- */}
+                                    {scanData.status === "CHECKED_IN" && (
+                                        <div className="bg-blue-50 border border-blue-100 text-blue-700 p-4 rounded-2xl text-xs flex gap-3 items-center">
+                                            <FiCheckCircle size={18} className="flex-shrink-0" />
+                                            <b>ผู้ป่วยท่านนี้เข้ารับบริการเรียบร้อยแล้ว</b>
+                                        </div>
                                     )}
+                                    {scanData.status === "CANCELLED" && (
+                                        <div className="bg-rose-50 border border-rose-100 text-rose-700 p-4 rounded-2xl text-xs flex gap-3 items-center">
+                                            <FiXCircle size={18} className="flex-shrink-0" />
+                                            <b>รายการนี้ถูกยกเลิกแล้ว ไม่สามารถเช็คอินได้</b>
+                                        </div>
+                                    )}
+
+                                    {/* --- Action Buttons --- */}
+                                    <div className="pt-4 border-t border-gray-50">
+                                        {scanData.status === "BOOKED" ? (
+                                            <button
+                                                onClick={handleConfirmCheckIn}
+                                                disabled={loading}
+                                                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold shadow-xl shadow-emerald-100 transition-all active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                                            >
+                                                {loading ? "กำลังบันทึกข้อมูล..." : <><FiCheckCircle /> ยืนยันการเช็คอิน</>}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={handleResetScan}
+                                                className="w-full py-4 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-2xl font-bold transition-all text-sm"
+                                            >
+                                                สแกนรายการถัดไป
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}

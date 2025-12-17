@@ -112,7 +112,7 @@ const supabase = createClient(
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { name, phone, date, slot_id, slotLabel, lineUserId } = body;
+        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
         
         console.log("🚀 New Booking Request:", { name, date, slot_id });
 
@@ -169,7 +169,8 @@ export async function POST(request) {
             slot_label: slotLabel,
             booking_code: newBookingCode,
             line_user_id: lineUserId || 'NO_LIFF',
-            status: 'BOOKED'
+            status: 'BOOKED' ,
+            line_picture_url: line_picture_url
         };
 
         // --- STEP 3: บันทึกและแจ้งเตือน (🔥 ทำพร้อมกันแบบ Parallel) ---
