@@ -40,6 +40,7 @@ export default function Home() {
   // Line Profile
   const [lineUserId, setLineUserId] = useState("");
   const [lineDisplayName, setLineDisplayName] = useState("");
+  const [userProfile, setUserProfile] = useState(null);
   const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
   // // --- 1. Load Initial Data (LIFF + Dates) ---
@@ -302,7 +303,7 @@ export default function Home() {
         name: name.trim(),
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
         lineUserId: lineUserId || "NO_LIFF",
-        line_picture_url: userProfile.pictureUrl
+        line_picture_url: userProfile?.pictureUrl || null
       });
 
       if (!res.ok) throw new Error(res.message);
