@@ -4,6 +4,8 @@ import Swal from "sweetalert2";
 // import { Html5QrcodeScanner } from "html5-qrcode";
 import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import * as XLSX from 'xlsx';
+import { QRCodeCanvas } from "qrcode.react";
+
 import {
     adminLogin,
     adminGetBookings,
@@ -914,7 +916,7 @@ export default function AdminPage() {
                 </div>
             </div>
             
-            <styl>
+            <style>
                 .custom-input { 
                     height: 42px !important; 
                     margin: 0 !important; 
@@ -937,25 +939,24 @@ export default function AdminPage() {
                     margin-bottom: 5px; 
                 }
 
-                /* 🔥 จุดที่แก้: ปรับแต่งหน้าตาของ Validation Message (Error) */
+                
                 .swal2-validation-message {
-                    background: transparent !important; /* ลบพื้นหลังเทาออก */
-                    color: #e11d48 !important;        /* เปลี่ยนสีเป็นสีแดง rose-600 */
-                    font-size: 12px !important;         /* ปรับตัวอักษรให้เล็กลง */
-                    border: none !important;            /* ลบเส้นขอบออก */
-                    box-shadow: none !important;        /* ลบเงาออก */
+                    background: transparent !important; 
+                    color: #e11d48 !important;   
+                    font-size: 12px !important;         
+                    border: none !important;         
+                    box-shadow: none !important;        
                     margin-top: 10px !important;
                     justify-content: center !important;
                 }
                 .swal2-icon {
-                    width: 40px !important;    /* ปรับความกว้าง (ปกติจะประมาณ 80px) */
-                    height: 40px !important;   /* ปรับความสูง */
-                    // margin: 20px auto !important; /* ปรับระยะห่างบน-ล่าง */
+                    width: 40px !important;   
+                    height: 40px !important;   
+                    // margin: 20px auto !important; 
                     // margin-top: 10px !important;
                     margin-bottom: 10px !important;
                 }
 
-                /* ปรับขนาดตัวอักษรหรือเครื่องหมายข้างในไอคอน (เช่น ตัว i หรือเครื่องหมาย ?) */
                 .swal2-icon .swal2-icon-content {
                     font-size: 24px !important; 
                 }
@@ -1281,7 +1282,7 @@ export default function AdminPage() {
                                                 filteredBookings.map((b, i) => (
                                                     <tr key={i} className="hover:bg-emerald-50/30">
                                                         <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
-                                                        <td className="px-4 py-3">
+                                                        {/* <td className="px-4 py-3"> */}
 
                                                             {/* <div className="font-bold text-gray-800">{b.name}</div> */}
                                                             {/* <div className="flex items-center gap-2">
@@ -1319,7 +1320,7 @@ export default function AdminPage() {
                                                                     </button>
                                                                 </div>
                                                             </td>
-                                                        </td>
+                                                        {/* </td> */}
                                                         {/* <td className="px-4 py-3 font-mono text-gray-600 text-xs">{b.phone}</td> */}
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-1.5 group/phone">
@@ -1570,6 +1571,7 @@ export default function AdminPage() {
                                     <div className="inline-block p-3 bg-white rounded-full shadow-sm mb-2 text-3xl">
                                         {scanData.status === "CHECKED_IN" ? <FiCheckCircle className="text-emerald-500" /> : scanData.status === "CANCELLED" ? <FiXCircle className="text-rose-500" /> : <FiClock className="text-yellow-500" />}
                                     </div>
+
                                     <h2 className="text-xl font-bold text-emerald-900">{scanData.name}</h2>
                                     <p className="text-sm text-emerald-600 font-mono">{scanData.code}</p>
                                 </div>
