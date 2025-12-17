@@ -40,7 +40,12 @@ export default function Home() {
   // Line Profile
   const [lineUserId, setLineUserId] = useState("");
   const [lineDisplayName, setLineDisplayName] = useState("");
-  const [userProfile, setUserProfile] = useState(null);
+  // --- State สำหรับเก็บโปรไฟล์ LINE ---
+  const [userProfile, setUserProfile] = useState({
+    userId: "",
+    displayName: "",
+    pictureUrl: null // ตัวแปรที่เก็บ URL รูปภาพ
+  });
   const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
   // // --- 1. Load Initial Data (LIFF + Dates) ---
@@ -134,13 +139,16 @@ export default function Home() {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          // setLineUserId(profile.userId);
-          // setLineDisplayName(profile.displayName);
+
+          // 🔥 แก้ไขจุดนี้: บันทึกข้อมูลโปรไฟล์ลงใน State
           setUserProfile({
             userId: profile.userId,
             displayName: profile.displayName,
-            pictureUrl: profile.pictureUrl // 🔥 นี่คือตัวที่เราต้องการ
+            pictureUrl: profile.pictureUrl
           });
+
+          setLineUserId(profile.userId);
+          setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
         } else {
           liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
@@ -303,6 +311,7 @@ export default function Home() {
         name: name.trim(),
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
         lineUserId: lineUserId || "NO_LIFF",
+        // ใช้เครื่องหมาย ? เพื่อป้องกัน error กรณีที่ pictureUrl ยังโหลดไม่เสร็จ
         line_picture_url: userProfile?.pictureUrl || null
       });
 
