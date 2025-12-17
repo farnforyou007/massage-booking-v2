@@ -103,6 +103,7 @@ export default function AdminPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
     const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 }); // 🔥 เพิ่มบรรทัดนี้
+    const [chartRaw, setChartRaw] = useState([]); // เก็บข้อมูลดิบสำหรับกราฟ
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
@@ -231,6 +232,7 @@ export default function AdminPage() {
                 if (resB.stats) {
                     setServerStats(resB.stats);
                 }
+                if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
             }
 
             // 🔥 แก้ไขจุดนี้: ทำให้ข้อมูล Slot กลับมาแสดง
@@ -441,26 +443,141 @@ export default function AdminPage() {
         });
     }, [bookings, searchTerm, filterStatus]);
 
+    // const chartData = useMemo(() => {
+    //     const stats = {};
+    //     bookings.forEach(b => {
+    //         if (b.status !== "CANCELLED") {
+    //             const time = b.slot || b.slot_label;
+    //             stats[time] = (stats[time] || 0) + 1;
+    //         }
+    //     });
+    //     return Object.keys(stats).sort().map(time => ({ name: time, count: stats[time] }));
+    // }, [bookings]);
+    // 🔥 แก้ไข Logic กราฟ: รองรับปี และเรียงลำดับถูกต้อง
+    // const chartData = useMemo(() => {
+    //     if (!chartRaw || chartRaw.length === 0) return [];
+
+    //     const stats = {};
+
+    //     chartRaw.forEach(b => {
+    //         // ⚠️ สาเหตุที่เลขไม่ตรงกับ KPI: บรรทัดนี้ตัดยอด "ยกเลิก" ออกจากกราฟ
+    //         if (b.status === "CANCELLED") return;
+
+    //         let key = "";
+    //         let sortKey = 0; // ตัวแปรช่วยเรียงลำดับ
+
+    //         const d = new Date(b.booking_date);
+
+    //         if (viewMode === "daily") {
+    //             // รายวัน: แกน X เป็นเวลา
+    //             key = b.slot_label || "ไม่ระบุ";
+    //             sortKey = b.slot_id || parseInt(key.replace(":", "")) || 0;
+    //         } else if (viewMode === "monthly") {
+    //             // รายเดือน: แกน X เป็นวันที่ (1-31)
+    //             key = d.getDate();
+    //             sortKey = d.getDate();
+    //         } else if (viewMode === "yearly") {
+    //             // รายปี: แกน X เป็นเดือน (ม.ค. - ธ.ค.)
+    //             const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    //             key = thaiMonths[d.getMonth()];
+    //             sortKey = d.getMonth();
+    //         } else {
+    //             // 🔥 ทั้งหมด (All): แกน X เป็น "เดือน + ปี" (ม.ค. 67)
+    //             const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    //             const yearThai = d.getFullYear() + 543;
+    //             key = `${thaiMonths[d.getMonth()]} ${yearThai.toString().slice(-2)}`; // เช่น ม.ค. 68
+
+    //             // สร้าง sortKey เป็น YYYYMM เพื่อให้เรียงปีถูก (เช่น 202401, 202501)
+    //             sortKey = (d.getFullYear() * 100) + d.getMonth();
+    //         }
+
+    //         if (!stats[key]) {
+    //             stats[key] = { count: 0, sort: sortKey };
+    //         }
+    //         stats[key].count += 1;
+    //     });
+
+    //     // แปลง Object เป็น Array แล้วเรียงลำดับตาม sortKey
+    //     return Object.keys(stats)
+    //         .map(k => ({ name: k, count: stats[k].count, sort: stats[k].sort }))
+    //         .sort((a, b) => a.sort - b.sort); // เรียงจากน้อยไปมาก
+
+    // }, [chartRaw, viewMode]);
+
     const chartData = useMemo(() => {
+        if (!chartRaw || chartRaw.length === 0) return [];
+
         const stats = {};
-        bookings.forEach(b => {
-            if (b.status !== "CANCELLED") {
-                const time = b.slot || b.slot_label;
-                stats[time] = (stats[time] || 0) + 1;
+
+        chartRaw.forEach(b => {
+            // ⚠️ สำคัญ: ต้องลบบรรทัดนี้ออก เพื่อให้นับยอด "ยกเลิก" เข้ามาแสดงด้วย
+            // if (b.status === "CANCELLED") return; 
+
+            let key = "";
+            let sortKey = 0;
+            const d = new Date(b.booking_date);
+
+            // --- Logic การสร้าง Key (เหมือนเดิม) ---
+            if (viewMode === "daily") {
+                key = b.slot_label || "ไม่ระบุ";
+                sortKey = b.slot_id || parseInt(key.replace(":", "")) || 0;
+            } else if (viewMode === "monthly") {
+                key = d.getDate();
+                sortKey = d.getDate();
+            } else if (viewMode === "yearly") {
+                const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                key = thaiMonths[d.getMonth()];
+                sortKey = d.getMonth();
+            } else {
+                const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                const yearThai = d.getFullYear() + 543;
+                key = `${thaiMonths[d.getMonth()]} ${yearThai.toString().slice(-2)}`;
+                sortKey = (d.getFullYear() * 100) + d.getMonth();
+            }
+
+            // --- 🔥 จุดที่เปลี่ยน: เตรียม Object สำหรับเก็บแยกสถานะ ---
+            if (!stats[key]) {
+                stats[key] = {
+                    name: key,
+                    sort: sortKey,
+                    BOOKED: 0,      // รอรับบริการ
+                    CHECKED_IN: 0,  // เช็คอินแล้ว
+                    CANCELLED: 0    // ยกเลิก
+                };
+            }
+
+            // บวกเลขตามสถานะของรายการนั้นๆ
+            if (stats[key][b.status] !== undefined) {
+                stats[key][b.status] += 1;
             }
         });
-        return Object.keys(stats).sort().map(time => ({ name: time, count: stats[time] }));
-    }, [bookings]);
 
+        // ส่งคืนค่าและเรียงลำดับ
+        return Object.values(stats).sort((a, b) => a.sort - b.sort);
+
+    }, [chartRaw, viewMode]);
+    // const pieData = useMemo(() => {
+    //     const stats = { BOOKED: 0, CHECKED_IN: 0, CANCELLED: 0 };
+    //     bookings.forEach(b => { if (stats[b.status] !== undefined) stats[b.status]++; });
+    //     return [
+    //         { name: 'รอรับบริการ', value: stats.BOOKED, color: '#EAB308' },
+    //         { name: 'เช็คอินแล้ว', value: stats.CHECKED_IN, color: '#10B981' },
+    //         { name: 'ยกเลิก', value: stats.CANCELLED, color: '#EF4444' }
+    //     ].filter(i => i.value > 0);
+    // }, [bookings]);
+    // 🔥 แก้ไข Pie Chart ให้ใช้ข้อมูลสรุปจาก Server (serverStats)
     const pieData = useMemo(() => {
-        const stats = { BOOKED: 0, CHECKED_IN: 0, CANCELLED: 0 };
-        bookings.forEach(b => { if (stats[b.status] !== undefined) stats[b.status]++; });
+        // ดึงค่าจาก serverStats ซึ่งเป็นยอดรวมทั้งหมดที่แท้จริง
+        const waiting = serverStats.waiting || 0;
+        const checkedIn = serverStats.checkedIn || 0;
+        const cancelled = serverStats.cancelled || 0;
+
         return [
-            { name: 'รอรับบริการ', value: stats.BOOKED, color: '#EAB308' },
-            { name: 'เช็คอินแล้ว', value: stats.CHECKED_IN, color: '#10B981' },
-            { name: 'ยกเลิก', value: stats.CANCELLED, color: '#EF4444' }
-        ].filter(i => i.value > 0);
-    }, [bookings]);
+            { name: 'รอรับบริการ', value: waiting, color: '#EAB308' },
+            { name: 'เช็คอินแล้ว', value: checkedIn, color: '#10B981' },
+            { name: 'ยกเลิก', value: cancelled, color: '#EF4444' }
+        ].filter(i => i.value > 0); // ซ่อนอันที่มีค่าเป็น 0
+    }, [serverStats]);
 
     // const kpiStats = useMemo(() => ({
     //     total: bookings.length,
@@ -1279,11 +1396,19 @@ export default function AdminPage() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                {/* <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
                                     <FiBarChart2 /> สถิติการจองวันนี้
+                                </h3> */}
+                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                    <FiBarChart2 />
+                                    {/* 🔥 แก้ไขหัวข้อให้ตรงกับโหมด */}
+                                    {viewMode === 'daily' && 'สถิติการจองรายชั่วโมง (วันนี้)'}
+                                    {viewMode === 'monthly' && 'สถิติการจองรายวัน (เดือนนี้)'}
+                                    {viewMode === 'yearly' && 'สถิติการจองรายเดือน (ปีนี้)'}
+                                    {viewMode === 'all' && 'แนวโน้มการจองทั้งหมด (ภาพรวม)'}
                                 </h3>
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    {/* <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={chartData}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name"
@@ -1298,6 +1423,49 @@ export default function AdminPage() {
                                                     fontWeight: 'bold'
                                                 }} />
                                             <Bar dataKey="count" name="จำนวน" fill="#059669" radius={[4, 4, 0, 0]} barSize={40} activeBar={{ fill: '#047857' }} />
+                                        </BarChart>
+                                    </ResponsiveContainer> */}
+
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" fontSize={12} tick={{ fontSize: 10 }} />
+                                            <YAxis allowDecimals={false} fontSize={12} />
+                                            <Tooltip
+                                                cursor={{ fill: '#f0fdf4' }}
+                                                contentStyle={{ borderRadius: '8px' }}
+                                                labelStyle={{ color: '#064e3b', fontWeight: 'bold' }}
+                                            />
+                                            <Legend /> {/* เพิ่ม Legend เพื่อบอกว่าสีไหนคืออะไร */}
+
+                                            {/* 🔥 เปลี่ยนเป็น 3 แท่งนี้ครับ */}
+                                            {/* stackId="a" คือสั่งให้มันซ้อนกัน ถ้าเอาออกมันจะวางเรียงข้างๆ กัน */}
+
+                                            <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} barSize={40} />
+                                            <Bar dataKey="BOOKED" name="รอรับบริการ" stackId="a" fill="#EAB308" radius={[0, 0, 0, 0]} barSize={40} />
+                                            <Bar dataKey="CANCELLED" name="ยกเลิก" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={40} />
+                                            {/* 🔥 แบบแยกแท่ง: ลบ stackId="a" ออกให้หมดครับ */}
+                                            {/* <Bar
+                                                dataKey="CHECKED_IN"
+                                                name="เช็คอินแล้ว"
+                                                fill="#10B981"
+                                                radius={[4, 4, 0, 0]} // ใส่โค้งมนด้านบนให้สวยงาม
+                                                barSize={12} // ⚠️ ปรับขนาดให้เล็กลงหน่อย ไม่งั้นจะเบียดกัน
+                                            />
+                                            <Bar
+                                                dataKey="BOOKED"
+                                                name="รอรับบริการ"
+                                                fill="#EAB308"
+                                                radius={[4, 4, 0, 0]}
+                                                barSize={12}
+                                            />
+                                            <Bar
+                                                dataKey="CANCELLED"
+                                                name="ยกเลิก"
+                                                fill="#EF4444"
+                                                radius={[4, 4, 0, 0]}
+                                                barSize={12}
+                                            /> */}
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -1401,7 +1569,7 @@ export default function AdminPage() {
                                             <tr>
                                                 {/* <th className="px-4 py-3">วันที่จอง</th> */}
                                                 {/* {viewMode === 'monthly' && <th className="px-4 py-3">วันที่จอง</th>} */}
-                                                {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') 
+                                                {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all')
                                                     && <th className="px-4 py-3">วันที่จอง</th>}
                                                 <th className="px-4 py-3">เวลา</th>
                                                 <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
@@ -1423,7 +1591,7 @@ export default function AdminPage() {
                                                                 {formatThaiDateAdmin(b.date)}
                                                             </td>
                                                         )} */}
-                                                        {(viewMode === 'monthly'|| viewMode === 'yearly' || viewMode === 'all') && (
+                                                        {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
                                                             <td className="px-4 py-3 font-medium text-gray-600">
                                                                 {formatThaiDateAdmin(b.date)}
                                                             </td>
@@ -1861,8 +2029,9 @@ export default function AdminPage() {
                             </div>
                         )}
                     </div>
-                )}
-            </main>
-        </div>
+                )
+                }
+            </main >
+        </div >
     );
 }

@@ -115,8 +115,8 @@ export async function GET(request) {
 
         // --- ส่วนที่ 3: คำสั่งดึงยอด KPI (Stats) ---
         // 🔥 อันนี้คือส่วนที่เพิ่มมาใหม่: ดึงเฉพาะ status ของ "ทั้งหมด" (ไม่ทำ Pagination)
-        let queryStats = supabase.from('bookings').select('status');
-        queryStats = applyFilters(queryStats); // ใส่ตัวกรองเหมือนกันเป๊ะ
+        let queryStats = supabase.from('bookings').select('status, booking_date, slot_label');
+        queryStats = applyFilters(queryStats); // ใช้ตัวกรองเดียวกับตาราง
 
         // --- ส่วนที่ 4: ยิงคำสั่งพร้อมกัน (Parallel Execution) ---
         const [resItems, resStats] = await Promise.all([
@@ -144,7 +144,8 @@ export async function GET(request) {
             total: resItems.count, // จำนวนรายการทั้งหมด (สำหรับ Pagination)
             page,
             limit,
-            stats: stats // ✅ ส่งยอด KPI ที่ถูกต้องกลับไปด้วย
+            stats: stats, // ✅ ส่งยอด KPI ที่ถูกต้องกลับไปด้วย
+            chartDataRaw: resStats.data || [] // ส่งข้อมูลดิบสำหรับทำกราฟไปด้วย
         });
 
     } catch (error) {
