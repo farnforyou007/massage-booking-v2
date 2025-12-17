@@ -307,7 +307,9 @@ export default function Home() {
     setMessage({ text: "", ok: true });
     try {
       const res = await createBooking({
-        date, slot_id: slotId, slotLabel: selectedSlot?.label,
+        date, 
+        slot_id: slotId, 
+        slotLabel: selectedSlot?.label,
         name: name.trim(),
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
         lineUserId: lineUserId || "NO_LIFF",

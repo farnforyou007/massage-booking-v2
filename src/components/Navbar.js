@@ -13,7 +13,7 @@ export default function Navbar() {
 
     const navItems = [
         { path: "/", label: "ลงทะเบียน", icon: <FiCalendar /> },
-        { path: "/ticket", label: "ตรวจสอบสิทธิ์", icon: <FiClipboard /> },
+        { path: "/ticket", label: "ตรวจสอบสถานะ", icon: <FiClipboard /> },
         // { path: "/scan", label: "สแกน (จนท.)", icon: <FiCamera /> }, // อันเดิมคุณคอมเมนต์ไว้
         { path: "/admin", label: "เจ้าหน้าที่", icon: <FiTool /> },
     ];

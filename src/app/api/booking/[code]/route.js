@@ -53,7 +53,8 @@ export async function GET(request, { params }) {
                 date: data.booking_date,
                 slot: data.slot_label,
                 status: data.status,
-                line_user_id: data.line_user_id
+                line_user_id: data.line_user_id ,
+                line_picture_url: data.line_picture_url
             }
         });
 

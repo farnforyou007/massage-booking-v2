@@ -98,35 +98,148 @@ export default function AdminPage() {
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
     const [showDateManager, setShowDateManager] = useState(false)
+
+    const [viewMode, setViewMode] = useState("daily"); // "daily" หรือ "monthly"
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 }); // 🔥 เพิ่มบรรทัดนี้
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
             setAuthToken(savedToken);
         }
     }, []);
+
+    // async function reloadData() {
+    //     if (!authToken) return;
+    //     setLoading(true);
+    //     try {
+    //         const [resB, resS] = await Promise.all([
+    //             adminGetBookings(date, authToken),
+    //             adminGetSlotsSummary(date, authToken)
+    //         ]);
+
+    //         // 🔥 FIX: แปลงข้อมูลจาก Supabase ให้เข้ากับ UI เดิม
+    //         const rawItems = resB.items || [];
+    //         const mappedBookings = rawItems.map(b => ({
+    //             ...b,
+    //             name: b.customer_name || b.name, // ใช้ customer_name ถ้ามี
+    //             code: b.booking_code || b.code,   // ใช้ booking_code ถ้ามี
+    //             date: b.booking_date || b.date,
+    //             slot: b.slot_label || b.slot
+    //         }));
+
+    //         setBookings(mappedBookings);
+    //         setSlots(resS.items || []);
+    //     } catch (err) {
+    //         console.error(err);
+    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
+
+    // ปรับ reloadData ให้ส่งค่าหน้าปัจจุบันไปที่ API
+    // async function reloadData() {
+    //     if (!authToken) return;
+    //     setLoading(true);
+    //     try {
+    //         // เพิ่ม Parameter สำหรับ Pagination (ตัวอย่างหน้าละ 20)
+    //         const [resB, resS] = await Promise.all([
+    //             adminGetBookings(date, authToken),
+    //             adminGetSlotsSummary(date, authToken)
+    //         ]);
+    //         // const resB = await adminGetBookings(date, authToken);
+
+    //         const rawItems = resB.items || [];
+    //         const mappedBookings = rawItems.map(b => ({
+    //             ...b,
+    //             // 🔥 ตรวจสอบให้แน่ใจว่าชื่อฟิลด์ตรงกับใน Database
+    //             name: b.customer_name,
+    //             code: b.booking_code,
+    //             date: b.booking_date,
+    //             slot: b.slot_label,    // ชื่อรอบเวลา เช่น 09:00
+    //             phone: b.phone,
+    //             line_picture_url: b.line_picture_url // ดึงรูปโปรไฟล์มาด้วย
+    //         }));
+
+    //         setBookings(mappedBookings);
+    //         // เก็บค่า Total สำหรับทำ Pagination
+    //         setTotalRecords(resB.total || rawItems.length);
+    //         setSlots(resS.items || []);
+
+    //     } catch (err) {
+    //         console.error(err);
+    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
+
     async function reloadData() {
         if (!authToken) return;
         setLoading(true);
         try {
+            let urlBookings = "";
+
+            // 1. กำหนด URL ตามโหมดการดู
+            if (viewMode === "daily") {
+                urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`;
+            } else if (viewMode === "monthly") {
+                // คำนวณวันแรกและวันสุดท้ายของเดือน
+                const firstDay = new Date(date);
+                firstDay.setDate(1);
+                const lastDay = new Date(date);
+                lastDay.setMonth(lastDay.getMonth() + 1, 0);
+
+                const startStr = firstDay.toISOString().slice(0, 10);
+                const endStr = lastDay.toISOString().slice(0, 10);
+                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+            } else if (viewMode === "yearly") {
+                // 🔥 เพิ่มส่วนนี้: คำนวณวันแรกและวันสุดท้ายของ "ปี"
+                const currentYear = new Date(date).getFullYear();
+                const startStr = `${currentYear}-01-01`;
+                const endStr = `${currentYear}-12-31`;
+
+                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+            } else {
+                // 🔥 โหมดทั้งหมด (All): ไม่ส่งวันที่ แต่ส่ง page/limit เหมือนเดิม
+                urlBookings = `/api/admin/bookings?page=${currentPage}&limit=20`;
+            }
+
+            // 2. ดึงข้อมูลทั้ง Bookings และ Slots พร้อมกัน
             const [resB, resS] = await Promise.all([
-                adminGetBookings(date, authToken),
-                adminGetSlotsSummary(date, authToken)
+                fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
+                adminGetSlotsSummary(date, authToken) // ดึงข้อมูล Slot ของวันที่เลือก
             ]);
 
-            // 🔥 FIX: แปลงข้อมูลจาก Supabase ให้เข้ากับ UI เดิม
-            const rawItems = resB.items || [];
-            const mappedBookings = rawItems.map(b => ({
-                ...b,
-                name: b.customer_name || b.name, // ใช้ customer_name ถ้ามี
-                code: b.booking_code || b.code,   // ใช้ booking_code ถ้ามี
-                date: b.booking_date || b.date,
-                slot: b.slot_label || b.slot
-            }));
+            if (resB.ok) {
+                const rawItems = resB.items || [];
+                const mappedBookings = rawItems.map(b => ({
+                    ...b,
+                    name: b.customer_name || b.name,
+                    code: b.booking_code || b.code,
+                    date: b.booking_date || b.date,
+                    slot: b.slot_label || b.slot,
+                    phone: b.phone,
+                    line_picture_url: b.line_picture_url || null
+                }));
 
-            setBookings(mappedBookings);
-            setSlots(resS.items || []);
+                setBookings(mappedBookings);
+                setTotalRecords(resB.total || 0);
+
+                if (resB.stats) {
+                    setServerStats(resB.stats);
+                }
+            }
+
+            // 🔥 แก้ไขจุดนี้: ทำให้ข้อมูล Slot กลับมาแสดง
+            if (resS && resS.items) {
+                setSlots(resS.items);
+            }
+
         } catch (err) {
-            console.error(err);
+            console.error("Reload Error:", err);
             Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
         } finally {
             setLoading(false);
@@ -139,7 +252,13 @@ export default function AdminPage() {
             .catch(err => console.error("Load dates error:", err));
     };
 
-    useEffect(() => { if (authToken) { reloadData(); loadDates(); } }, [date, authToken]);
+    // useEffect(() => { if (authToken) { reloadData(); loadDates(); } }, [date, authToken]);
+    useEffect(() => {
+        if (authToken) {
+            reloadData();
+            loadDates();
+        }
+    }, [date, authToken, viewMode, currentPage]);
 
     async function handleLogin(e) {
         e.preventDefault();
@@ -343,12 +462,23 @@ export default function AdminPage() {
         ].filter(i => i.value > 0);
     }, [bookings]);
 
-    const kpiStats = useMemo(() => ({
-        total: bookings.length,
-        checkedIn: bookings.filter(b => b.status === "CHECKED_IN").length,
-        cancelled: bookings.filter(b => b.status === "CANCELLED").length,
-        waiting: bookings.filter(b => b.status === "BOOKED").length
-    }), [bookings]);
+    // const kpiStats = useMemo(() => ({
+    //     total: bookings.length,
+    //     checkedIn: bookings.filter(b => b.status === "CHECKED_IN").length,
+    //     cancelled: bookings.filter(b => b.status === "CANCELLED").length,
+    //     waiting: bookings.filter(b => b.status === "BOOKED").length
+    // }), [bookings]);
+
+    // 🔥 เปลี่ยนจากของเดิม เป็นอันนี้ครับ
+    const kpiStats = useMemo(() => {
+        // ใช้ข้อมูลจาก Server ที่คำนวณมาให้แล้ว (ถูกต้อง 100%)
+        return {
+            total: serverStats.total || 0,
+            checkedIn: serverStats.checkedIn || 0,
+            cancelled: serverStats.cancelled || 0,
+            waiting: serverStats.waiting || 0
+        };
+    }, [serverStats]);
 
     useEffect(() => {
         let mounted = true;
@@ -451,29 +581,15 @@ export default function AdminPage() {
                     name: b.customer_name || b.name,
                     code: b.booking_code || b.code,
                     slot: b.slot_label || b.slot,
-                    date: b.booking_date || b.date
+                    date: b.booking_date || b.date,
+                    line_picture_url: b.line_picture_url || null
                 });
             }
+
             else Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
         } catch (err) { Swal.fire("Error", err.message, "error"); }
     };
-
-    // const handleFileUpload = async (e) => {
-    //     if (!e.target.files || e.target.files.length === 0) return;
-    //     const file = e.target.files[0];
-    //     setCameraEnabled(false);
-    //     Swal.fire({ title: 'กำลังอ่านรูป...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    //     const html5QrCode = new Html5Qrcode("reader-file-hidden");
-    //     try {
-    //         const result = await html5QrCode.scanFileV2(file, true);
-    //         if (result && result.decodedText) handleScanSuccess(result.decodedText);
-    //     } catch (err) {
-    //         Swal.close(); Swal.fire("อ่านรูปไม่ได้", "ไม่พบ QR Code", "error");
-    //     } finally {
-    //         html5QrCode.clear().catch(() => { });
-    //         e.target.value = '';
-    //     }
-    // };
+    console.log("Scan Data Result:", scanData);
     const handleFileUpload = async (e) => {
         // 1. เช็คว่ามีไฟล์ไหม
         if (!e.target.files || e.target.files.length === 0) return;
@@ -1208,21 +1324,33 @@ export default function AdminPage() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+                                <div className="flex bg-gray-100 p-1 rounded-xl w-fit mt-2 ml-4 -mb-2 border border-gray-200">
+                                    <button
+                                        onClick={() => { setViewMode("daily"); setCurrentPage(1); }}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                                    >
+                                        รายวัน
+                                    </button>
+                                    <button
+                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); }}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                                    >
+                                        รายเดือน
+                                    </button>
+                                    <button
+                                        onClick={() => { setViewMode("yearly"); setCurrentPage(1); }}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'yearly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                                    >
+                                        รายปี
+                                    </button>
+                                    <button
+                                        onClick={() => { setViewMode("all"); setCurrentPage(1); }}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                                    >
+                                        ทั้งหมด
+                                    </button>
+                                </div>
                                 <div className="p-4 border-b border-gray-100 flex gap-3 bg-gray-50/50">
-                                    {/* <div className="flex gap-3 flex-1">
-                                        <input type="text" placeholder="ค้นหา..." className="text-gray-900 placeholder:text-gray-400 flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                                        <select
-                                            // className="placeholder:text-gray-400 text-gray-900 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none cursor-pointer" 
-                                            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"
-
-                                            value={filterStatus}
-                                            onChange={e => setFilterStatus(e.target.value)}>
-                                            <option value="ALL">ทุกสถานะ</option>
-                                            <option value="BOOKED">รอรับบริการ</option>
-                                            <option value="CHECKED_IN">เช็คอินแล้ว</option>
-                                            <option value="CANCELLED">ยกเลิกแล้ว</option>
-                                        </select>
-                                    </div> */}
                                     <div className="flex flex-wrap md:flex-nowrap gap-3 flex-1">
                                         {/* 1. ช่องค้นหา - ปรับขนาดใหญ่ขึ้น */}
                                         <div className="relative flex-1 group">
@@ -1271,6 +1399,10 @@ export default function AdminPage() {
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
                                             <tr>
+                                                {/* <th className="px-4 py-3">วันที่จอง</th> */}
+                                                {/* {viewMode === 'monthly' && <th className="px-4 py-3">วันที่จอง</th>} */}
+                                                {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') 
+                                                    && <th className="px-4 py-3">วันที่จอง</th>}
                                                 <th className="px-4 py-3">เวลา</th>
                                                 <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
                                                 <th className="px-4 py-3">เบอร์โทร</th>
@@ -1282,22 +1414,21 @@ export default function AdminPage() {
                                             {filteredBookings.length > 0 ? (
                                                 filteredBookings.map((b, i) => (
                                                     <tr key={i} className="hover:bg-emerald-50/30">
+                                                        {/* <td className="px-4 py-3 font-medium text-gray-600">
+                                                            {formatThaiDateAdmin(b.date)}
+                                                        </td> */}
+
+                                                        {/* {viewMode === 'monthly' && (
+                                                            <td className="px-4 py-3 font-medium text-gray-600">
+                                                                {formatThaiDateAdmin(b.date)}
+                                                            </td>
+                                                        )} */}
+                                                        {(viewMode === 'monthly'|| viewMode === 'yearly' || viewMode === 'all') && (
+                                                            <td className="px-4 py-3 font-medium text-gray-600">
+                                                                {formatThaiDateAdmin(b.date)}
+                                                            </td>
+                                                        )}
                                                         <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
-                                                        {/* <td className="px-4 py-3"> */}
-
-                                                        {/* <div className="font-bold text-gray-800">{b.name}</div> */}
-                                                        {/* <div className="flex items-center gap-2">
-                                                                <span className="font-bold text-gray-800">{b.name}</span>
-                                                                <button
-                                                                    onClick={() => handleCopy(b.name, "ชื่อ")}
-                                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-emerald-600 transition-all"
-                                                                    title="คัดลอกชื่อ"
-                                                                >
-                                                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M8 17.7L8 19.2C8 20.3 8.9 21.2 10 21.2L20.5 21.2C21.6 21.2 22.5 20.3 22.5 19.2L22.5 8.7C22.5 7.6 21.6 6.7 20.5 6.7L19 6.7M14 14.8L14 3.3C14 2.2 13.1 1.3 12 1.3L1.5 1.3C0.4 1.3 -0.5 2.2 -0.5 3.3L-0.5 14.8C-0.5 15.9 0.4 16.8 1.5 16.8L12 16.8C13.1 16.8 14 15.9 14 14.8Z"></path></svg>
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{b.code}</div> */}
 
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center gap-1.5 group/name">
@@ -1309,6 +1440,7 @@ export default function AdminPage() {
                                                                 >
                                                                     <FiCopy size={13} />
                                                                 </button>
+
                                                             </div>
                                                             <div className="flex items-center gap-1.5 mt-0.5 group/code">
                                                                 <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
@@ -1319,6 +1451,10 @@ export default function AdminPage() {
                                                                 >
                                                                     <FiCopy size={10} />
                                                                 </button>
+
+                                                            </div>
+                                                            <div className="text-[9px] text-emerald-500 mt-1 italic">
+                                                                จองเมื่อ: {new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
                                                             </div>
                                                         </td>
                                                         {/* </td> */}
@@ -1342,19 +1478,11 @@ export default function AdminPage() {
                                                     </tr>
                                                 ))
                                             ) : (
-                                                // <tr>
-                                                //     <td colSpan="5" className="px-4 py-20 text-center">
-                                                //         <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
-                                                //             <FiSearch size={40} className="opacity-20" />
-                                                //             <p className="text-sm font-medium">ไม่พบข้อมูลการจองที่ค้นหา</p>
-                                                //             <p className="text-xs opacity-60">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
-                                                //         </div>
-                                                //     </td>
-                                                // </tr>
-                                                <tr>
-                                                    <td colSpan="5" className="p-0">
 
-                                                        <div className="flex flex-col items-center justify-center h-[450px] text-gray-400 gap-3">
+                                                <tr className="h-full">
+                                                    <td colSpan="6" className="p-0 align-middle">
+                                                        {/* <div className="flex flex-col items-center justify-center h-[450px] text-gray-400 gap-3"> */}
+                                                        <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3 min-h-[445px]">
                                                             <div className="p-4 bg-gray-50 rounded-full">
                                                                 <FiSearch size={48} className="opacity-20" />
                                                             </div>
@@ -1375,6 +1503,27 @@ export default function AdminPage() {
                                             )}
                                         </tbody>
                                     </table>
+                                </div>
+                                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between mt-auto ">
+                                    <div className="text-[10px] text-gray-500 font-medium">
+                                        แสดงหน้า {currentPage} (ทั้งหมด {totalRecords} รายการ)
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            disabled={currentPage === 1 || loading}
+                                            onClick={() => setCurrentPage(prev => prev - 1)}
+                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                                        >
+                                            ก่อนหน้า
+                                        </button>
+                                        <button
+                                            disabled={bookings.length < 20 || loading}
+                                            onClick={() => setCurrentPage(prev => prev + 1)}
+                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                                        >
+                                            ถัดไป
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1624,6 +1773,7 @@ export default function AdminPage() {
                                                 <img
                                                     src={scanData.line_picture_url}
                                                     alt="LINE Profile"
+                                                    referrerPolicy="no-referrer"
                                                     className="w-24 h-24 rounded-2xl border-4 border-white/20 object-cover shadow-2xl"
                                                 />
                                             ) : (

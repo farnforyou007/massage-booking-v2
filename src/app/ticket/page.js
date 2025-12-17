@@ -279,6 +279,19 @@ function TicketContent() {
 
                                 {/* Grid Info */}
                                 <div className="grid grid-cols-2 gap-y-5 gap-x-4 text-sm">
+                                    {/* <div className="col-span-2 text-lg font-semibold text-center">
+                                       
+                                        {booking.line_picture_url && (
+                                            <div className="mb-3">
+                                                <img
+                                                    src={booking.line_picture_url}
+                                                    alt="LINE Profile"
+                                                    className="w-30 h-30 rounded-full border-4 border-emerald-100 object-cover shadow-lg mx-auto"
+                                                    referrerPolicy="no-referrer"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>   */}
                                     <div className="col-span-2">
                                         <label className="block text-xs text-gray-400 mb-1 font-medium">ชื่อผู้จอง</label>
                                         <div className="flex items-center gap-2 text-gray-800 font-semibold text-base">
