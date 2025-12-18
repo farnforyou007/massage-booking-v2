@@ -99,7 +99,7 @@ export default function AdminPage() {
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
     const [showDateManager, setShowDateManager] = useState(false)
-
+    const notificationAudio = useRef(null);
     const [viewMode, setViewMode] = useState("daily"); // "daily" หรือ "monthly"
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
@@ -112,7 +112,10 @@ export default function AdminPage() {
         }
     }, []);
 
-
+    useEffect(() => {
+        // สร้างเตรียมไว้ตั้งแต่โหลดหน้าเว็บ
+        notificationAudio.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    }, []);
     // version reload realtime
     // async function reloadData(isSilent = false) {
     //     if (!authToken) return;
@@ -466,31 +469,36 @@ export default function AdminPage() {
         }
     }
 
-    // async function handleEditCapacity(slot) {
-    //     const { value: newCap } = await Swal.fire({
-    //         title: `แก้ไขจำนวนรับ (${slot.label})`,
-    //         input: "number",
-    //         inputValue: slot.capacity,
-    //         showCancelButton: true,
-    //         confirmButtonText: "บันทึก",
-    //         confirmButtonColor: "#059669"
-    //     });
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            // 🧮 คำนวณยอดรวมโดยการบวกค่าจากทุกแท่ง (Checked-in + Booked + Cancelled)
+            const total = payload.reduce((sum, entry) => sum + entry.value, 0);
 
-    //     if (newCap) {
-    //         Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    //         try {
-    //             const res = await adminUpdateSlotCapacity(slot.id, newCap, authToken);
-    //             Swal.close();
-    //             if (res.ok) {
-    //                 Toast.fire({ icon: 'success', title: 'บันทึกสำเร็จ' });
-    //                 reloadData();
-    //             } else {
-    //                 throw new Error(res.message);
-    //             }
-    //         } catch (err) { Swal.fire("Error", err.message, "error"); }
-    //     }
-    // }
+            return (
+                <div className="bg-white p-3 border border-gray-100 shadow-xl rounded-xl">
+                    {/* หัวข้อ: วันที่ หรือ ช่วงเวลา */}
+                    <p className="font-bold text-gray-700 mb-1">{label}</p>
+                    <hr className="my-1 border-gray-50" />
 
+                    {/* รายการสถานะแต่ละแท่ง */}
+                    {payload.map((entry, index) => (
+                        <p key={index} className="text-sm flex justify-between gap-4" style={{ color: entry.fill }}>
+                            <span>{entry.name}:</span>
+                            <span className="font-semibold">{entry.value}</span>
+                        </p>
+                    ))}
+
+                    {/* เส้นคั่นและยอดรวมทั้งหมด */}
+                    <hr className="my-2 border-gray-100 border-dashed" />
+                    <p className="text-sm font-bold text-gray-800 flex justify-between">
+                        <span>ยอดรวมทั้งหมด:</span>
+                        <span className="text-blue-600 ml-4">{total} รายการ</span>
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
     const handleAddDate = async () => {
         if (!newDate) return;
         if (manageDates.some(d => d.date === newDate)) {
@@ -1372,49 +1380,125 @@ export default function AdminPage() {
 
     };
 
-    const handleExportExcel = () => {
-        if (filteredBookings.length === 0) {
+    // const handleExportExcel = () => {
+    //     if (filteredBookings.length === 0) {
+    //         return Swal.fire("แจ้งเตือน", "ไม่มีข้อมูลสำหรับการส่งออก", "warning");
+    //     }
+
+    //     // 1. เตรียมข้อมูลที่จะใส่ใน Excel (เลือกเฉพาะฟิลด์ที่ต้องการ)
+    //     const dataToExport = filteredBookings.map((b, index) => ({
+    //         "ลำดับ": index + 1,
+    //         "วันที่จอง": b.date,
+    //         "รอบเวลา": b.slot,
+    //         "ชื่อ-นามสกุล": b.name,
+    //         "เบอร์โทรศัพท์": b.phone,
+    //         "รหัสการจอง": b.code,
+    //         "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
+    //             b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
+    //     }));
+
+    //     // 2. สร้าง Worksheet
+    //     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    //     // 3. กำหนดความกว้างของคอลัมน์เพื่อให้ดูสวยงาม
+    //     const wscols = [
+    //         { wch: 6 },  // ลำดับ
+    //         { wch: 12 }, // วันที่
+    //         { wch: 15 }, // รอบเวลา
+    //         { wch: 25 }, // ชื่อ
+    //         { wch: 15 }, // เบอร์โทร
+    //         { wch: 15 }, // รหัส
+    //         { wch: 15 }  // สถานะ
+    //     ];
+    //     worksheet['!cols'] = wscols;
+
+    //     // 4. สร้าง Workbook และบันทึกไฟล์
+    //     const workbook = XLSX.utils.book_new();
+    //     XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจอง");
+
+    //     // ตั้งชื่อไฟล์ตามวันที่ที่เลือก
+    //     XLSX.writeFile(workbook, `Booking_Report_${date}.xlsx`);
+
+    //     Toast.fire({
+    //         icon: 'success',
+    //         title: 'ส่งออกไฟล์ Excel สำเร็จ'
+    //     });
+    // };
+
+    const handleExportExcel = async () => {
+        // 1. ตรวจสอบเบื้องต้นว่ามีข้อมูลในหน้าจอไหม
+        if (totalRecords === 0) {
             return Swal.fire("แจ้งเตือน", "ไม่มีข้อมูลสำหรับการส่งออก", "warning");
         }
 
-        // 1. เตรียมข้อมูลที่จะใส่ใน Excel (เลือกเฉพาะฟิลด์ที่ต้องการ)
-        const dataToExport = filteredBookings.map((b, index) => ({
-            "ลำดับ": index + 1,
-            "วันที่จอง": b.date,
-            "รอบเวลา": b.slot,
-            "ชื่อ-นามสกุล": b.name,
-            "เบอร์โทรศัพท์": b.phone,
-            "รหัสการจอง": b.code,
-            "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
-                b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
-        }));
-
-        // 2. สร้าง Worksheet
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-
-        // 3. กำหนดความกว้างของคอลัมน์เพื่อให้ดูสวยงาม
-        const wscols = [
-            { wch: 6 },  // ลำดับ
-            { wch: 12 }, // วันที่
-            { wch: 15 }, // รอบเวลา
-            { wch: 25 }, // ชื่อ
-            { wch: 15 }, // เบอร์โทร
-            { wch: 15 }, // รหัส
-            { wch: 15 }  // สถานะ
-        ];
-        worksheet['!cols'] = wscols;
-
-        // 4. สร้าง Workbook และบันทึกไฟล์
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจอง");
-
-        // ตั้งชื่อไฟล์ตามวันที่ที่เลือก
-        XLSX.writeFile(workbook, `Booking_Report_${date}.xlsx`);
-
-        Toast.fire({
-            icon: 'success',
-            title: 'ส่งออกไฟล์ Excel สำเร็จ'
+        Swal.fire({
+            title: 'กำลังเตรียมข้อมูล...',
+            text: 'กรุณารอหลักครู่ ระบบกำลังรวบรวมข้อมูลทั้งหมด',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
         });
+
+        try {
+            // 2. สร้าง URL สำหรับดึงข้อมูลทั้งหมด (ไม่ส่งค่า page และเพิ่ม limit ให้สูงมาก)
+            let exportUrl = "";
+            if (viewMode === "daily") {
+                exportUrl = `/api/admin/bookings?date=${date}&limit=10000`;
+            } else if (viewMode === "monthly") {
+                const firstDay = new Date(date);
+                firstDay.setDate(1);
+                const lastDay = new Date(date);
+                lastDay.setMonth(lastDay.getMonth() + 1, 0);
+                exportUrl = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&limit=10000`;
+            } else if (viewMode === "yearly") {
+                const currentYear = new Date(date).getFullYear();
+                exportUrl = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&limit=10000`;
+            } else {
+                exportUrl = `/api/admin/bookings?limit=10000`;
+            }
+
+            // 3. Fetch ข้อมูลทั้งหมดจาก API
+            const res = await fetch(exportUrl, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            }).then(r => r.json());
+
+            if (!res.ok) throw new Error(res.message);
+
+            // 4. นำข้อมูลที่ได้มา Map เพื่อเตรียมใส่ Excel
+            const allData = res.items || [];
+            const dataToExport = allData.map((b, index) => ({
+                "ลำดับ": index + 1,
+                "วันที่จอง": b.booking_date || b.date,
+                "รอบเวลา": b.slot_label || b.slot,
+                "ชื่อ-นามสกุล": b.customer_name || b.name,
+                "เบอร์โทรศัพท์": b.phone,
+                "รหัสการจอง": b.booking_code || b.code,
+                "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
+                    b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
+            }));
+
+            // 5. สร้างไฟล์ Excel ตามปกติ
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const wscols = [
+                { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 25 },
+                { wch: 15 }, { wch: 15 }, { wch: 15 }
+            ];
+            worksheet['!cols'] = wscols;
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจองทั้งหมด");
+
+            Swal.close();
+            XLSX.writeFile(workbook, `Booking_Full_Report_${viewMode}_${date}.xlsx`);
+
+            Toast.fire({
+                icon: 'success',
+                title: `ส่งออกข้อมูลทั้งหมด ${allData.length} รายการสำเร็จ`
+            });
+
+        } catch (err) {
+            Swal.close();
+            Swal.fire("Error", "ไม่สามารถดึงข้อมูลเพื่อส่งออกได้: " + err.message, "error");
+        }
     };
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
@@ -1562,6 +1646,7 @@ export default function AdminPage() {
                                                                     cursor={{ fill: '#f8fafc' }}
                                                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                                 />
+                                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                                                                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
                                                                 <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
                                                                 <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
