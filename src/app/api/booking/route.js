@@ -109,114 +109,114 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export async function POST(request) {
-    try {
-        const body = await request.json();
-        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
+// export async function POST(request) {
+//     try {
+//         const body = await request.json();
+//         const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
         
-        console.log("🚀 New Booking Request:", { name, date, slot_id });
+//         console.log("🚀 New Booking Request:", { name, date, slot_id });
 
-        // --- STEP 1: ตรวจสอบเบื้องต้น (Validation) ---
-        // (ส่วนนี้ต้องทำแบบรอผล หรือ Sequential เพราะถ้าไม่ผ่าน ต้องหยุดทันที)
+//         // --- STEP 1: ตรวจสอบเบื้องต้น (Validation) ---
+//         // (ส่วนนี้ต้องทำแบบรอผล หรือ Sequential เพราะถ้าไม่ผ่าน ต้องหยุดทันที)
 
-        // 1.1 เช็คว่าจองซ้ำหรือไม่
-        const checkDuplicatePromise = supabase
-            .from('bookings')
-            .select('id')
-            .eq('booking_date', date)
-            .eq('slot_id', slot_id)
-            .eq('phone', phone)
-            .neq('status', 'CANCELLED')
-            .maybeSingle();
+//         // 1.1 เช็คว่าจองซ้ำหรือไม่
+//         const checkDuplicatePromise = supabase
+//             .from('bookings')
+//             .select('id')
+//             .eq('booking_date', date)
+//             .eq('slot_id', slot_id)
+//             .eq('phone', phone)
+//             .neq('status', 'CANCELLED')
+//             .maybeSingle();
 
-        // 1.2 เช็คว่ารอบเต็มหรือไม่ (ดึง Capacity และ Count พร้อมกัน)
-        const slotInfoPromise = supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
-        const countBookingPromise = supabase.from('bookings').select('*', { count: 'exact', head: true })
-            .eq('booking_date', date)
-            .eq('slot_id', slot_id)
-            .neq('status', 'CANCELLED');
+//         // 1.2 เช็คว่ารอบเต็มหรือไม่ (ดึง Capacity และ Count พร้อมกัน)
+//         const slotInfoPromise = supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
+//         const countBookingPromise = supabase.from('bookings').select('*', { count: 'exact', head: true })
+//             .eq('booking_date', date)
+//             .eq('slot_id', slot_id)
+//             .neq('status', 'CANCELLED');
 
-        // รอผลตรวจสอบทั้งหมดพร้อมกัน (เร็วขึ้นนิดหน่อย)
-        const [duplicateRes, slotRes, countRes] = await Promise.all([
-            checkDuplicatePromise, 
-            slotInfoPromise, 
-            countBookingPromise
-        ]);
+//         // รอผลตรวจสอบทั้งหมดพร้อมกัน (เร็วขึ้นนิดหน่อย)
+//         const [duplicateRes, slotRes, countRes] = await Promise.all([
+//             checkDuplicatePromise, 
+//             slotInfoPromise, 
+//             countBookingPromise
+//         ]);
 
-        // Logic ตรวจสอบ
-        if (duplicateRes.data) {
-            return NextResponse.json({ ok: false, message: "ขออภัย ! คุณจองช่วงเวลานี้ไปแล้ว" }, { status: 400 });
-        }
+//         // Logic ตรวจสอบ
+//         if (duplicateRes.data) {
+//             return NextResponse.json({ ok: false, message: "ขออภัย ! คุณจองช่วงเวลานี้ไปแล้ว" }, { status: 400 });
+//         }
 
-        const capacity = slotRes.data?.capacity || 0;
-        const currentCount = countRes.count || 0;
+//         const capacity = slotRes.data?.capacity || 0;
+//         const currentCount = countRes.count || 0;
 
-        if (currentCount >= capacity) {
-            console.error(`Full: ${currentCount}/${capacity} for slot ${slot_id}`);
-            return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
-        }
+//         if (currentCount >= capacity) {
+//             console.error(`Full: ${currentCount}/${capacity} for slot ${slot_id}`);
+//             return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
+//         }
 
-        // --- STEP 2: เตรียมข้อมูล ---
-        const phoneClean = phone.replace(/[^0-9]/g, ""); 
-        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase(); 
-        const newBookingCode = `${phoneClean}-${randomSuffix}`; 
+//         // --- STEP 2: เตรียมข้อมูล ---
+//         const phoneClean = phone.replace(/[^0-9]/g, ""); 
+//         const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase(); 
+//         const newBookingCode = `${phoneClean}-${randomSuffix}`; 
 
-        const bookingData = {
-            customer_name: name,
-            booking_date: date,
-            phone: phone,
-            slot_id: slot_id,
-            slot_label: slotLabel,
-            booking_code: newBookingCode,
-            line_user_id: lineUserId || 'NO_LIFF',
-            status: 'BOOKED' ,
-            line_picture_url: line_picture_url
-        };
+//         const bookingData = {
+//             customer_name: name,
+//             booking_date: date,
+//             phone: phone,
+//             slot_id: slot_id,
+//             slot_label: slotLabel,
+//             booking_code: newBookingCode,
+//             line_user_id: lineUserId || 'NO_LIFF',
+//             status: 'BOOKED' ,
+//             line_picture_url: line_picture_url
+//         };
 
-        // --- STEP 3: บันทึกและแจ้งเตือน (🔥 ทำพร้อมกันแบบ Parallel) ---
+//         // --- STEP 3: บันทึกและแจ้งเตือน (🔥 ทำพร้อมกันแบบ Parallel) ---
         
-        // งานที่ 1: บันทึกลง Supabase
-        const saveToDbPromise = supabase.from('bookings').insert([bookingData])
-            .then(({ error }) => {
-                if (error) throw error;
-                return { success: true };
-            });
+//         // งานที่ 1: บันทึกลง Supabase
+//         const saveToDbPromise = supabase.from('bookings').insert([bookingData])
+//             .then(({ error }) => {
+//                 if (error) throw error;
+//                 return { success: true };
+//             });
 
-        // งานที่ 2: ส่ง LINE (ถ้ามี ID)
-        let sendLinePromise = Promise.resolve(); // สร้าง Promise ว่างๆ ไว้ก่อน
+//         // งานที่ 2: ส่ง LINE (ถ้ามี ID)
+//         let sendLinePromise = Promise.resolve(); // สร้าง Promise ว่างๆ ไว้ก่อน
         
-        if (lineUserId && lineUserId !== 'NO_LIFF') {
-            const liffUrl = process.env.NEXT_PUBLIC_LIFF_ID 
-                ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/ticket?code=${newBookingCode}`
-                : `https://google.com`;
+//         if (lineUserId && lineUserId !== 'NO_LIFF') {
+//             const liffUrl = process.env.NEXT_PUBLIC_LIFF_ID 
+//                 ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/ticket?code=${newBookingCode}`
+//                 : `https://google.com`;
 
-            const flexMessage = lineClient.createBookingFlex({
-                code: newBookingCode,
-                name: name,
-                date: date,
-                slot: slotLabel,
-                ticketUrl: liffUrl
-            });
+//             const flexMessage = lineClient.createBookingFlex({
+//                 code: newBookingCode,
+//                 name: name,
+//                 date: date,
+//                 slot: slotLabel,
+//                 ticketUrl: liffUrl
+//             });
 
-            // สั่งให้ส่ง LINE (แต่ไม่ต้องรอผลลัพธ์เพื่อ return)
-            sendLinePromise = lineClient.push(lineUserId, flexMessage)
-                .then(() => console.log("✅ Sent LINE success"))
-                .catch(err => console.error("⚠️ LINE Failed (but booking saved):", err));
-        }
+//             // สั่งให้ส่ง LINE (แต่ไม่ต้องรอผลลัพธ์เพื่อ return)
+//             sendLinePromise = lineClient.push(lineUserId, flexMessage)
+//                 .then(() => console.log("✅ Sent LINE success"))
+//                 .catch(err => console.error("⚠️ LINE Failed (but booking saved):", err));
+//         }
 
-        // 🔥 จุดเปลี่ยนความเร็ว: สั่งให้ DB และ LINE ทำงานพร้อมกัน!
-        // เราจะรอแค่ Save DB ให้เสร็จก็พอ ส่วน LINE ให้มันทำงานของมันไป (หรือจะรอทั้งคู่ก็ได้ ถ้าเน็ตเร็วพอ)
-        await Promise.all([saveToDbPromise, sendLinePromise]);
+//         // 🔥 จุดเปลี่ยนความเร็ว: สั่งให้ DB และ LINE ทำงานพร้อมกัน!
+//         // เราจะรอแค่ Save DB ให้เสร็จก็พอ ส่วน LINE ให้มันทำงานของมันไป (หรือจะรอทั้งคู่ก็ได้ ถ้าเน็ตเร็วพอ)
+//         await Promise.all([saveToDbPromise, sendLinePromise]);
 
-        // ส่ง Response กลับหน้าบ้านทันที
-        console.log("✅ Booking Completed:", newBookingCode);
-        return NextResponse.json({ ok: true, bookingCode: newBookingCode });
+//         // ส่ง Response กลับหน้าบ้านทันที
+//         console.log("✅ Booking Completed:", newBookingCode);
+//         return NextResponse.json({ ok: true, bookingCode: newBookingCode });
 
-    } catch (error) {
-        console.error("❌ Booking Error:", error);
-        return NextResponse.json({ ok: false, message: error.message || "ระบบขัดข้อง" }, { status: 500 });
-    }
-}
+//     } catch (error) {
+//         console.error("❌ Booking Error:", error);
+//         return NextResponse.json({ ok: false, message: error.message || "ระบบขัดข้อง" }, { status: 500 });
+//     }
+// }
 
 // version จองใหม่ เพิ่มกฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
 // import { NextResponse } from 'next/server';
@@ -228,75 +228,75 @@ export async function POST(request) {
 //     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 // );
 
-// export async function POST(request) {
-//     try {
-//         const body = await request.json();
-//         const { name, phone, date, slot_id, slotLabel, lineUserId } = body;
+export async function POST(request) {
+    try {
+        const body = await request.json();
+        const { name, phone, date, slot_id, slotLabel, lineUserId } = body;
 
-//         // -----------------------------------------------------------------------
-//         // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
-//         // -----------------------------------------------------------------------
+        // -----------------------------------------------------------------------
+        // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
+        // -----------------------------------------------------------------------
 
-//         // สร้างเงื่อนไขค้นหา: เช็คเบอร์โทร หรือ Line ID (ถ้ามี)
-//         let query = supabase.from('bookings')
-//             .select('booking_date, slot_label, booking_code')
-//             .eq('status', 'BOOKED'); // 👈 หัวใจสำคัญ: หาเฉพาะรายการที่ "ยังไม่เช็คอิน"
+        // สร้างเงื่อนไขค้นหา: เช็คเบอร์โทร หรือ Line ID (ถ้ามี)
+        let query = supabase.from('bookings')
+            .select('booking_date, slot_label, booking_code')
+            .eq('status', 'BOOKED'); // 👈 หัวใจสำคัญ: หาเฉพาะรายการที่ "ยังไม่เช็คอิน"
 
-//         // ถ้ามี Line ID ให้เช็คทั้งเบอร์ และ Line ID (เผื่อเปลี่ยนเบอร์แต่ใช้ไลน์เดิม)
-//         if (lineUserId && lineUserId !== 'NO_LIFF') {
-//             query = query.or(`phone.eq.${phone},line_user_id.eq.${lineUserId}`);
-//         } else {
-//             // ถ้าไม่มี Line ID เช็คแค่เบอร์
-//             query = query.eq('phone', phone);
-//         }
+        // ถ้ามี Line ID ให้เช็คทั้งเบอร์ และ Line ID (เผื่อเปลี่ยนเบอร์แต่ใช้ไลน์เดิม)
+        if (lineUserId && lineUserId !== 'NO_LIFF') {
+            query = query.or(`phone.eq.${phone},line_user_id.eq.${lineUserId}`);
+        } else {
+            // ถ้าไม่มี Line ID เช็คแค่เบอร์
+            query = query.eq('phone', phone);
+        }
 
-//         const { data: pendingBooking } = await query.maybeSingle();
+        const { data: pendingBooking } = await query.maybeSingle();
 
-//         // ถ้าเจอว่ามีคิวค้างอยู่ (ยังไม่ได้ Check-in และยังไม่ Cancel)
-//         if (pendingBooking) {
-//             return NextResponse.json({
-//                 ok: false,
-//                 message: `คุณมีคิวที่จองไว้อยู่แล้ว !\n(${pendingBooking.booking_date} เวลา ${pendingBooking.slot_label})\n\n⚠️ กรุณาไปใช้บริการและเช็คอินก่อน จึงจะจองคิวครั้งถัดไปได้ครับ`
-//             }, { status: 400 });
-//         }
-//         // -----------------------------------------------------------------------
+        // ถ้าเจอว่ามีคิวค้างอยู่ (ยังไม่ได้ Check-in และยังไม่ Cancel)
+        if (pendingBooking) {
+            return NextResponse.json({
+                ok: false,
+                message: `ท่านมีรายการจองในระบบแล้ว !\n(${pendingBooking.booking_date} เวลา ${pendingBooking.slot_label})\n\n⚠️ กรุณาเข้าใช้บริการหรือยกเลิกรายการเดิมก่อนจองใหม่`
+            }, { status: 400 });
+        }
+        // -----------------------------------------------------------------------
 
 
-//         // 2. เช็คเต็ม (เหมือนเดิม)
-//         const { data: slotData } = await supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
-//         const capacity = slotData?.capacity || 0;
+        // 2. เช็คเต็ม (เหมือนเดิม)
+        const { data: slotData } = await supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
+        const capacity = slotData?.capacity || 0;
 
-//         const { count } = await supabase.from('bookings').select('*', { count: 'exact', head: true })
-//             .eq('booking_date', date)
-//             .eq('slot_id', slot_id)
-//             .neq('status', 'CANCELLED');
+        const { count } = await supabase.from('bookings').select('*', { count: 'exact', head: true })
+            .eq('booking_date', date)
+            .eq('slot_id', slot_id)
+            .neq('status', 'CANCELLED');
 
-//         if (count >= capacity) {
-//             return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
-//         }
+        if (count >= capacity) {
+            return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
+        }
 
-//         // 3. บันทึก (เหมือนเดิม)
-//         const phoneClean = phone.replace(/[^0-9]/g, "");
-//         const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-//         const newBookingCode = `${phoneClean}-${randomSuffix}`;
+        // 3. บันทึก (เหมือนเดิม)
+        const phoneClean = phone.replace(/[^0-9]/g, "");
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newBookingCode = `${phoneClean}-${randomSuffix}`;
 
-//         const { error } = await supabase.from('bookings').insert([{
-//             customer_name: name,
-//             booking_date: date,
-//             phone: phone,
-//             slot_id: slot_id,
-//             slot_label: slotLabel,
-//             booking_code: newBookingCode,
-//             line_user_id: lineUserId || 'NO_LIFF',
-//             status: 'BOOKED'
-//         }]);
+        const { error } = await supabase.from('bookings').insert([{
+            customer_name: name,
+            booking_date: date,
+            phone: phone,
+            slot_id: slot_id,
+            slot_label: slotLabel,
+            booking_code: newBookingCode,
+            line_user_id: lineUserId || 'NO_LIFF',
+            status: 'BOOKED'
+        }]);
 
-//         if (error) throw error;
+        if (error) throw error;
 
-//         return NextResponse.json({ ok: true, bookingCode: newBookingCode });
+        return NextResponse.json({ ok: true, bookingCode: newBookingCode });
 
-//     } catch (error) {
-//         console.error("Booking Error:", error);
-//         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
-//     }
-// }
+    } catch (error) {
+        console.error("Booking Error:", error);
+        return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    }
+}

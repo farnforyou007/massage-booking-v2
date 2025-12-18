@@ -238,7 +238,7 @@ export default function AdminPage() {
 
             // ✅ คง Logic การกรองเดิมของคุณไว้ทั้งหมด (ห้ามลบ)
             if (viewMode === "daily") {
-                urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`;
+                urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=50`;
             } else if (viewMode === "monthly") {
                 const firstDay = new Date(date);
                 firstDay.setDate(1);
@@ -246,14 +246,14 @@ export default function AdminPage() {
                 lastDay.setMonth(lastDay.getMonth() + 1, 0);
                 const startStr = firstDay.toISOString().slice(0, 10);
                 const endStr = lastDay.toISOString().slice(0, 10);
-                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
             } else if (viewMode === "yearly") {
                 const currentYear = new Date(date).getFullYear();
                 const startStr = `${currentYear}-01-01`;
                 const endStr = `${currentYear}-12-31`;
-                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
             } else {
-                urlBookings = `/api/admin/bookings?page=${currentPage}&limit=20`;
+                urlBookings = `/api/admin/bookings?page=${currentPage}&limit=50`;
             }
 
             const [resB, resS] = await Promise.all([
@@ -1775,8 +1775,7 @@ export default function AdminPage() {
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
                                             <tr>
-                                                {/* <th className="px-4 py-3">วันที่จอง</th> */}
-                                                {/* {viewMode === 'monthly' && <th className="px-4 py-3">วันที่จอง</th>} */}
+                                                <th className="px-4 py-3 text-center w-16">ลำดับ</th>
                                                 {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all')
                                                     && <th className="px-4 py-3">วันที่จอง</th>}
                                                 <th className="px-4 py-3">เวลา</th>
@@ -1788,71 +1787,70 @@ export default function AdminPage() {
                                         </thead>
                                         <tbody className="text-sm divide-y divide-gray-50">
                                             {filteredBookings.length > 0 ? (
-                                                filteredBookings.map((b, i) => (
-                                                    <tr key={i} className="hover:bg-emerald-50/30">
-                                                        {/* <td className="px-4 py-3 font-medium text-gray-600">
-                                                            {formatThaiDateAdmin(b.date)}
-                                                        </td> */}
+                                                // filteredBookings.map((b, i) => (
+                                                filteredBookings.map((b, i) => {
+                                                    const rowNumber = ((currentPage - 1) * 20) + (i + 1);
 
-                                                        {/* {viewMode === 'monthly' && (
-                                                            <td className="px-4 py-3 font-medium text-gray-600">
-                                                                {formatThaiDateAdmin(b.date)}
+                                                    return (
+                                                        <tr key={i} className="hover:bg-emerald-50/30">
+                                                            <td className="px-4 py-3 text-center font-mono text-gray-400 text-xs">
+                                                                {rowNumber}
                                                             </td>
-                                                        )} */}
-                                                        {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
-                                                            <td className="px-4 py-3 font-medium text-gray-600">
-                                                                {formatThaiDateAdmin(b.date)}
+                                                            {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
+                                                                <td className="px-4 py-3 font-medium text-gray-600">
+                                                                    {formatThaiDateAdmin(b.date)}
+                                                                </td>
+                                                            )}
+                                                            <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
+
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-1.5 group/name">
+                                                                    <span className="font-bold text-gray-800">{b.name}</span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(b.name, "ชื่อ")}
+                                                                        className="text-gray-300 hover:text-emerald-600 transition-colors"
+                                                                        title="คัดลอกชื่อ"
+                                                                    >
+                                                                        <FiCopy size={13} />
+                                                                    </button>
+
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 mt-0.5 group/code">
+                                                                    <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(b.code, "รหัสจอง")}
+                                                                        className="text-gray-300 hover:text-emerald-500 transition-colors"
+                                                                        title="คัดลอกรหัส"
+                                                                    >
+                                                                        <FiCopy size={10} />
+                                                                    </button>
+
+                                                                </div>
+                                                                <div className="text-[9px] text-emerald-500 mt-1 italic">
+                                                                    จองเมื่อ: {new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+                                                                </div>
                                                             </td>
-                                                        )}
-                                                        <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
 
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-1.5 group/name">
-                                                                <span className="font-bold text-gray-800">{b.name}</span>
-                                                                <button
-                                                                    onClick={() => handleCopy(b.name, "ชื่อ")}
-                                                                    className="text-gray-300 hover:text-emerald-600 transition-colors"
-                                                                    title="คัดลอกชื่อ"
-                                                                >
-                                                                    <FiCopy size={13} />
-                                                                </button>
-
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5 mt-0.5 group/code">
-                                                                <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
-                                                                <button
-                                                                    onClick={() => handleCopy(b.code, "รหัสจอง")}
-                                                                    className="text-gray-300 hover:text-emerald-500 transition-colors"
-                                                                    title="คัดลอกรหัส"
-                                                                >
-                                                                    <FiCopy size={10} />
-                                                                </button>
-
-                                                            </div>
-                                                            <div className="text-[9px] text-emerald-500 mt-1 italic">
-                                                                จองเมื่อ: {new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
-                                                            </div>
-                                                        </td>
-                                                        {/* </td> */}
-                                                        {/* <td className="px-4 py-3 font-mono text-gray-600 text-xs">{b.phone}</td> */}
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-1.5 group/phone">
-                                                                <span className="font-mono text-gray-600 text-xs">{b.phone}</span>
-                                                                <button
-                                                                    onClick={() => handleCopy(b.phone, "เบอร์โทร")}
-                                                                    className="text-gray-300 hover:text-blue-500 transition-colors"
-                                                                    title="คัดลอกเบอร์โทร"
-                                                                >
-                                                                    <FiCopy size={12} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
-                                                        </td>
-                                                    </tr>
-                                                ))
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-1.5 group/phone">
+                                                                    <span className="font-mono text-gray-600 text-xs">{b.phone}</span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(b.phone, "เบอร์โทร")}
+                                                                        className="text-gray-300 hover:text-blue-500 transition-colors"
+                                                                        title="คัดลอกเบอร์โทร"
+                                                                    >
+                                                                        <FiCopy size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
+                                                            </td>
+                                                        </tr>
+                                                        // ))
+                                                    );
+                                                })
                                             ) : (
 
                                                 <tr className="h-full">
