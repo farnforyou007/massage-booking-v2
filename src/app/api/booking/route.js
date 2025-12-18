@@ -113,7 +113,7 @@ const supabase = createClient(
 //     try {
 //         const body = await request.json();
 //         const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
-        
+
 //         console.log("🚀 New Booking Request:", { name, date, slot_id });
 
 //         // --- STEP 1: ตรวจสอบเบื้องต้น (Validation) ---
@@ -174,7 +174,7 @@ const supabase = createClient(
 //         };
 
 //         // --- STEP 3: บันทึกและแจ้งเตือน (🔥 ทำพร้อมกันแบบ Parallel) ---
-        
+
 //         // งานที่ 1: บันทึกลง Supabase
 //         const saveToDbPromise = supabase.from('bookings').insert([bookingData])
 //             .then(({ error }) => {
@@ -184,7 +184,7 @@ const supabase = createClient(
 
 //         // งานที่ 2: ส่ง LINE (ถ้ามี ID)
 //         let sendLinePromise = Promise.resolve(); // สร้าง Promise ว่างๆ ไว้ก่อน
-        
+
 //         if (lineUserId && lineUserId !== 'NO_LIFF') {
 //             const liffUrl = process.env.NEXT_PUBLIC_LIFF_ID 
 //                 ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/ticket?code=${newBookingCode}`
@@ -251,16 +251,40 @@ export async function POST(request) {
         }
 
         const { data: pendingBooking } = await query.maybeSingle();
-
         // ถ้าเจอว่ามีคิวค้างอยู่ (ยังไม่ได้ Check-in และยังไม่ Cancel)
+        // ในส่วนที่เช็ค pendingBooking ใน API
         if (pendingBooking) {
+            const d = new Date(pendingBooking.booking_date);
+            const thaiDate = `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`;
+
+            // ✅ ใช้ HTML แทน String ธรรมดาเพื่อให้จัดระเบียบได้
+            const htmlMessage = `
+    <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
+        <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
+            🚫 <b>ทำรายการไม่สำเร็จ</b>
+        </p>
+        <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+        <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>ท่านมีรายการจองอยู่แล้ว :</b></p>
+        <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
+            <p>• ${thaiDate}</p>
+            <p>• รอบ ${pendingBooking.slot_label}</p>
+        </div>
+        <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+        <p style="color: #6b7280; font-size: 11px; text-align: center;">
+            💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
+        </p>
+    </div>
+`;
+
             return NextResponse.json({
                 ok: false,
-                message: `ท่านมีรายการจองในระบบแล้ว !\n(${pendingBooking.booking_date} เวลา ${pendingBooking.slot_label})\n\n⚠️ กรุณาเข้าใช้บริการหรือยกเลิกรายการเดิมก่อนจองใหม่`
+                message: htmlMessage // ส่ง HTML นี้ไปแทน
             }, { status: 400 });
         }
-        // -----------------------------------------------------------------------
 
+        // -----------------------------------------------------------------------
+        // ส่วนที่ 2: ตรวจสอบซ้ำ และเต็ม (เหมือนเดิม)
+        // -----------------------------------------------------------------------
 
         // 2. เช็คเต็ม (เหมือนเดิม)
         const { data: slotData } = await supabase.from('slots').select('capacity').eq('start_time', slot_id).single();

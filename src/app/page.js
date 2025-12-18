@@ -151,7 +151,7 @@ export default function Home() {
           setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
         } else {
-          liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
+          // liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
@@ -307,8 +307,8 @@ export default function Home() {
     setMessage({ text: "", ok: true });
     try {
       const res = await createBooking({
-        date, 
-        slot_id: slotId, 
+        date,
+        slot_id: slotId,
         slotLabel: selectedSlot?.label,
         name: name.trim(),
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
@@ -346,7 +346,7 @@ export default function Home() {
         icon: "error",
         title: "ผิดพลาด!",
         timer: 2000,
-        text: err.message,
+        html: err.message,
         showConfirmButton: false,
         // confirmButtonText: "ตกลง"
       });
@@ -553,13 +553,35 @@ export default function Home() {
           </form>
 
           {/* Notification Area */}
-          {message.text && (
+          {/* {message.text && (
             <div className={`rounded-lg p-4 flex items-start gap-3 text-sm animate-pulse ${message.ok ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}>
-              {message.ok ? <FiCheckCircle className="mt-0.5 text-lg" /> : <FiAlertCircle className="mt-0.5 text-lg" />}
-              <div className="whitespace-pre-line">{message.text}</div>
+              {message.ok ? <FiCheckCircle className="mt-0.5 text-lg" />
+                : <FiAlertCircle className="mt-0.5 text-lg" />}
+              <div
+                className="whitespace-pre-line flex-1  "
+                dangerouslySetInnerHTML={{ __html: message.text }}
+                />
             </div>
           )}
+          <div className="whitespace-pre-line">{message.text}</div> */}
 
+          {message.text && (
+            <div className={`rounded-2xl p-4 flex items-start gap-3 text-sm shadow-sm border animate-pulse ${message.ok
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-rose-50 text-rose-800 border-rose-200"
+              }`}>
+              {message.ok ? (
+                <FiCheckCircle className="mt-0.5 text-lg flex-shrink-0" />
+              ) : (
+                <FiAlertCircle className="mt-0.5 text-lg flex-shrink-0" />
+              )}
+
+              <div
+                className="flex-1 min-w-0" // ลบ h-[450px] ออกเพื่อให้ขนาดพอดีเนื้อหา
+                dangerouslySetInnerHTML={{ __html: message.text }}
+              />
+            </div>
+          )}
           {/* Ticket Result (QR Code) */}
           {bookingCode && (
             <div className="mt-8 border-t-2 border-dashed border-gray-200 pt-6 flex flex-col items-center text-center fade-in-up">
