@@ -117,108 +117,64 @@ export default function AdminPage() {
         notificationAudio.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     }, []);
     // version reload realtime
+
+
     // async function reloadData(isSilent = false) {
     //     if (!authToken) return;
+
+    //     // แสดง Loading เฉพาะตอนเปลี่ยนโหมด/วันที่ (ถ้า Real-time ให้โหลดเงียบๆ)
     //     if (!isSilent) setLoading(true);
-    //     // setLoading(true);
+
     //     try {
     //         let urlBookings = "";
 
-    //         // 1. กำหนด URL ตามโหมดการดู
+    //         // ✅ คง Logic การกรองเดิมของคุณไว้ทั้งหมด (ห้ามลบ)
     //         if (viewMode === "daily") {
-    //             urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`;
+    //             urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=50`;
     //         } else if (viewMode === "monthly") {
-    //             // คำนวณวันแรกและวันสุดท้ายของเดือน
     //             const firstDay = new Date(date);
     //             firstDay.setDate(1);
     //             const lastDay = new Date(date);
     //             lastDay.setMonth(lastDay.getMonth() + 1, 0);
-
     //             const startStr = firstDay.toISOString().slice(0, 10);
     //             const endStr = lastDay.toISOString().slice(0, 10);
-    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
     //         } else if (viewMode === "yearly") {
-    //             // 🔥 เพิ่มส่วนนี้: คำนวณวันแรกและวันสุดท้ายของ "ปี"
     //             const currentYear = new Date(date).getFullYear();
     //             const startStr = `${currentYear}-01-01`;
     //             const endStr = `${currentYear}-12-31`;
-
-    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
     //         } else {
-    //             // 🔥 โหมดทั้งหมด (All): ไม่ส่งวันที่ แต่ส่ง page/limit เหมือนเดิม
-    //             urlBookings = `/api/admin/bookings?page=${currentPage}&limit=20`;
+    //             urlBookings = `/api/admin/bookings?page=${currentPage}&limit=50`;
     //         }
 
-    //         // 2. ดึงข้อมูลทั้ง Bookings และ Slots พร้อมกัน
     //         const [resB, resS] = await Promise.all([
     //             fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
-    //             adminGetSlotsSummary(date, authToken) // ดึงข้อมูล Slot ของวันที่เลือก
+    //             adminGetSlotsSummary(date, authToken)
     //         ]);
 
     //         if (resB.ok) {
-    //             const rawItems = resB.items || [];
-    //             const mappedBookings = rawItems.map(b => ({
+    //             // 1. อัปเดตตารางรายการ
+    //             setBookings((resB.items || []).map(b => ({
     //                 ...b,
     //                 name: b.customer_name || b.name,
     //                 code: b.booking_code || b.code,
     //                 date: b.booking_date || b.date,
     //                 slot: b.slot_label || b.slot,
-    //                 phone: b.phone,
-    //                 line_picture_url: b.line_picture_url || null
-    //             }));
-
-    //             setBookings(mappedBookings);
+    //                 phone: b.phone
+    //             })));
     //             setTotalRecords(resB.total || 0);
 
-    //             if (resB.stats) {
-    //                 setServerStats(resB.stats);
-    //             }
-    //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
-    //         }
-
-    //         // 🔥 แก้ไขจุดนี้: ทำให้ข้อมูล Slot กลับมาแสดง
-    //         if (resS && resS.items) {
-    //             setSlots(resS.items);
-    //         }
-
-    //     } catch (err) {
-    //         console.error("Reload Error:", err);
-    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
-    //     } finally {
-    //         // setLoading(false);
-    //         if (!isSilent) setLoading(false);
-    //     }
-    // }
-    // แก้ไขฟังก์ชัน reloadData ในไฟล์ page.js
-    // async function reloadData(isSilent = false) {
-    //     if (!authToken) return;
-
-    //     // ถ้าไม่ใช่ Silent ให้โชว์ Loading (กันจอขาว)
-    //     if (!isSilent) setLoading(true);
-
-    //     try {
-    //         // สร้าง URL โดยใช้ค่าจาก State ปัจจุบันเสมอ
-    //         const urlBookings = viewMode === 'daily'
-    //             ? `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`
-    //             : `/api/admin/bookings?startDate=${dateRange.start}&endDate=${dateRange.end}&page=${currentPage}&limit=20`;
-
-    //         const [resB, resS] = await Promise.all([
-    //             adminGetBookings(urlBookings, authToken),
-    //             adminGetSlotsSummary(date, authToken)
-    //         ]);
-
-    //         if (resB.ok) {
-    //             // อัปเดตข้อมูลตาราง
-    //             setBookings(resB.items || []);
-    //             setTotalRecords(resB.total || 0);
-
-    //             // อัปเดต KPI และ กราฟ (ถ้า API ส่งมาให้)
+    //             // 🔥 2. อัปเดตตัวเลข KPI และ ข้อมูลกราฟ (เพื่อให้ Real-time จริงๆ)
     //             if (resB.stats) setServerStats(resB.stats);
     //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
     //         }
 
     //         if (resS.ok) {
     //             setSlots(resS.items || []);
+    //         }
+    //         if (resS && resS.items) {
+    //             setSlots(resS.items);
     //         }
     //     } catch (err) {
     //         console.error("Reload Error:", err);
@@ -229,40 +185,30 @@ export default function AdminPage() {
 
     async function reloadData(isSilent = false) {
         if (!authToken) return;
-
-        // แสดง Loading เฉพาะตอนเปลี่ยนโหมด/วันที่ (ถ้า Real-time ให้โหลดเงียบๆ)
         if (!isSilent) setLoading(true);
 
         try {
             let urlBookings = "";
+            const baseParams = `page=${currentPage}&limit=50&search=${encodeURIComponent(searchTerm)}`; // 🔥 เพิ่ม search ตรงนี้
 
-            // ✅ คง Logic การกรองเดิมของคุณไว้ทั้งหมด (ห้ามลบ)
             if (viewMode === "daily") {
-                urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=50`;
+                urlBookings = `/api/admin/bookings?date=${date}&${baseParams}`;
             } else if (viewMode === "monthly") {
-                const firstDay = new Date(date);
-                firstDay.setDate(1);
-                const lastDay = new Date(date);
-                lastDay.setMonth(lastDay.getMonth() + 1, 0);
-                const startStr = firstDay.toISOString().slice(0, 10);
-                const endStr = lastDay.toISOString().slice(0, 10);
-                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
+                const firstDay = new Date(date); firstDay.setDate(1);
+                const lastDay = new Date(date); lastDay.setMonth(lastDay.getMonth() + 1, 0);
+                urlBookings = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&${baseParams}`;
             } else if (viewMode === "yearly") {
                 const currentYear = new Date(date).getFullYear();
-                const startStr = `${currentYear}-01-01`;
-                const endStr = `${currentYear}-12-31`;
-                urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
+                urlBookings = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&${baseParams}`;
             } else {
-                urlBookings = `/api/admin/bookings?page=${currentPage}&limit=50`;
+                urlBookings = `/api/admin/bookings?${baseParams}`;
             }
 
-            const [resB, resS] = await Promise.all([
-                fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
-                adminGetSlotsSummary(date, authToken)
-            ]);
+            const resB = await fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+            const resS = await adminGetSlotsSummary(date, authToken);
 
             if (resB.ok) {
-                // 1. อัปเดตตารางรายการ
+                // ✅ Map ข้อมูลให้ชื่อฟิลด์ตรงกับที่ตารางต้องการ
                 setBookings((resB.items || []).map(b => ({
                     ...b,
                     name: b.customer_name || b.name,
@@ -272,15 +218,10 @@ export default function AdminPage() {
                     phone: b.phone
                 })));
                 setTotalRecords(resB.total || 0);
-
-                // 🔥 2. อัปเดตตัวเลข KPI และ ข้อมูลกราฟ (เพื่อให้ Real-time จริงๆ)
-                if (resB.stats) setServerStats(resB.stats);
-                if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
+                if (resB.stats) setServerStats(resB.stats); // 🔥 อัปเดต KPI
+                if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw); // 🔥 อัปเดตกราฟ
             }
-
-            if (resS.ok) {
-                setSlots(resS.items || []);
-            }
+            // if (resS.ok) setSlots(resS.items || []);
             if (resS && resS.items) {
                 setSlots(resS.items);
             }
@@ -291,6 +232,25 @@ export default function AdminPage() {
         }
     }
 
+    // useEffect(() => {
+    //     if (authToken) {
+    //         // หน่วงเวลาการค้นหานิดนึง (Debounce) เพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
+    //         const delayDebounceFn = setTimeout(() => {
+    //             reloadData();
+    //         }, 500);
+
+    //         return () => clearTimeout(delayDebounceFn);
+    //     }
+    // }, [date, authToken, viewMode, currentPage, searchTerm]); 
+    // // 🔥 เพิ่ม searchTerm ตรงนี้
+    useEffect(() => {
+        if (authToken) {
+            const delaySearch = setTimeout(() => {
+                reloadData();
+            }, 500); // หน่วงเวลา 0.5 วินาทีเพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
+            return () => clearTimeout(delaySearch);
+        }
+    }, [date, authToken, viewMode, currentPage, searchTerm]); // 🔥 เพิ่ม searchTerm ตรงนี้
     const loadDates = () => {
         getManageDates()
             .then(res => { if (res.items) setManageDates(res.items); })
@@ -301,39 +261,9 @@ export default function AdminPage() {
         if (authToken) {
             reloadData();
             loadDates();
-            //     const interval = setInterval(() => {
-            //         // ส่ง true เข้าไปเพื่อให้เป็น Silent Reload (ไม่ขึ้นตัวหมุน Loading)
-            //         reloadData(true);
-            //     }, 20000); // 20000 ms = 20 วินาที (ปรับลดได้ตามความเหมาะสม)
 
-            //     // 3. สำคัญมาก: ต้องล้างค่าเมื่อปิดหน้าจอเพื่อไม่ให้เครื่องค้าง
-            //     return () => clearInterval(interval);
         }
     }, [date, authToken, viewMode, currentPage]);
-
-
-
-    // useEffect(() => {
-    //     if (!authToken) return;
-
-    //     const channel = supabase
-    //         .channel('admin_dashboard_realtime')
-    //         .on(
-    //             'postgres_changes',
-    //             { event: 'INSERT', schema: 'public', table: 'bookings' },
-    //             (payload) => {
-    //                 console.log("New booking detected!");
-    //                 // เรียกใช้ reloadData(true) เพื่อโหลดใหม่แบบเงียบๆ
-    //                 reloadData(true);
-    //             }
-    //         )
-    //         .subscribe();
-
-    //     return () => {
-    //         supabase.removeChannel(channel);
-    //     };
-    //     // เพิ่ม dependencies ให้ครบ
-    // }, [authToken, date, viewMode, currentPage]);
 
     useEffect(() => {
         if (!authToken) return;
@@ -579,25 +509,49 @@ export default function AdminPage() {
     //     });
     // }, [bookings, searchTerm, filterStatus]);
 
+    // const filteredBookings = useMemo(() => {
+    //     return bookings.filter(b => {
+    //         const searchLower = searchTerm.trim().toLowerCase();
+
+    //         // ดึงค่าเป้าหมายมาตรวจสอบ (ใช้ข้อมูลจาก bookings ที่ Map มาแล้ว)
+    //         const targetName = (b.name || "").toLowerCase();
+    //         const targetCode = (b.code || "").toLowerCase();
+    //         const targetPhone = (b.phone || "");
+
+    //         // กรองด้วยคำค้นหา (ชื่อ, เบอร์, หรือรหัสจอง)
+    //         const matchSearch = !searchLower ||
+    //             targetName.includes(searchLower) ||
+    //             targetPhone.includes(searchLower) ||
+    //             targetCode.includes(searchLower);
+
+    //         // กรองด้วยสถานะ (ALL, BOOKED, CHECKED_IN, CANCELLED)
+    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
+
+    //         return matchSearch && matchStatus;
+    //     });
+    // }, [bookings, searchTerm, filterStatus]);
+
     const filteredBookings = useMemo(() => {
         return bookings.filter(b => {
             const searchLower = searchTerm.trim().toLowerCase();
 
-            // ดึงค่าเป้าหมายมาตรวจสอบ (ใช้ข้อมูลจาก bookings ที่ Map มาแล้ว)
-            const targetName = (b.name || "").toLowerCase();
-            const targetCode = (b.code || "").toLowerCase();
-            const targetPhone = (b.phone || "");
+            // ถ้าไม่มีคำค้นหา ให้กรองตามสถานะอย่างเดียว
+            if (!searchLower) {
+                return filterStatus === "ALL" || b.status === filterStatus;
+            }
 
-            // กรองด้วยคำค้นหา (ชื่อ, เบอร์, หรือรหัสจอง)
-            const matchSearch = !searchLower ||
-                targetName.includes(searchLower) ||
-                targetPhone.includes(searchLower) ||
-                targetCode.includes(searchLower);
+            // รวมฟิลด์ชื่อ รหัสจอง และเบอร์โทรจากทุกความเป็นไปได้
+            const nameField = (b.customer_name || b.name || "").toLowerCase();
+            const codeField = (b.booking_code || b.code || "").toLowerCase();
+            const phoneField = (b.phone || "");
 
-            // กรองด้วยสถานะ (ALL, BOOKED, CHECKED_IN, CANCELLED)
+            const isMatch = nameField.includes(searchLower) ||
+                codeField.includes(searchLower) ||
+                phoneField.includes(searchLower);
+
             const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
 
-            return matchSearch && matchStatus;
+            return isMatch && matchStatus;
         });
     }, [bookings, searchTerm, filterStatus]);
 
@@ -1726,25 +1680,25 @@ export default function AdminPage() {
                             <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
                                 <div className="flex bg-gray-100 p-1 rounded-xl w-fit mt-2 ml-4 -mb-2 border border-gray-200">
                                     <button
-                                        onClick={() => { setViewMode("daily"); setCurrentPage(1);  setSearchTerm("");}}
+                                        onClick={() => { setViewMode("daily"); setCurrentPage(1); setSearchTerm(""); }}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         รายวัน
                                     </button>
                                     <button
-                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm("");}}
+                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm(""); }}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         รายเดือน
                                     </button>
                                     <button
-                                        onClick={() => { setViewMode("yearly"); setCurrentPage(1); }}
+                                        onClick={() => { setViewMode("yearly"); setCurrentPage(1); setSearchTerm(""); }}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'yearly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         รายปี
                                     </button>
                                     <button
-                                        onClick={() => { setViewMode("all"); setCurrentPage(1); }}
+                                        onClick={() => { setViewMode("all"); setCurrentPage(1); setSearchTerm(""); }}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         ทั้งหมด
@@ -1810,10 +1764,12 @@ export default function AdminPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm divide-y divide-gray-50">
-                                            {filteredBookings.length > 0 ? (
+                                            {/* {filteredBookings.length > 0 ? ( */}
+                                            {bookings.length > 0 ? (
                                                 // filteredBookings.map((b, i) => (
-                                                filteredBookings.map((b, i) => {
-                                                    const rowNumber = ((currentPage - 1) * 20) + (i + 1);
+                                                // filteredBookings.map((b, i) => {
+                                                bookings.map((b, i) => {
+                                                    const rowNumber = ((currentPage - 1) * 50) + (i + 1);
 
                                                     return (
                                                         <tr key={i} className="hover:bg-emerald-50/30">

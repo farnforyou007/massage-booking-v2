@@ -80,6 +80,81 @@ const supabase = createClient(
 
 // version with pagination and user info
 
+// export async function GET(request) {
+//     try {
+//         const { searchParams } = new URL(request.url);
+//         const date = searchParams.get('date');
+//         const startDate = searchParams.get('startDate');
+//         const endDate = searchParams.get('endDate');
+//         const page = parseInt(searchParams.get('page')) || 1;
+//         const limit = parseInt(searchParams.get('limit')) || 50;
+
+//         // --- ส่วนที่ 1: เตรียมตัวกรอง (Filter Logic) ---
+//         // เราแยก Logic การกรองออกมา เพื่อเอาไปใช้กับทั้ง 2 คำสั่ง (ดึงข้อมูลใส่ตาราง และ ดึงตัวเลข KPI)
+//         const applyFilters = (queryBuilder) => {
+//             if (date) {
+//                 return queryBuilder.eq('booking_date', date);
+//             } else if (startDate && endDate) {
+//                 return queryBuilder.gte('booking_date', startDate).lte('booking_date', endDate);
+//             }
+//             return queryBuilder;
+//         };
+
+//         // --- ส่วนที่ 2: คำสั่งดึงข้อมูลใส่ตาราง (Items) ---
+//         // อันนี้เหมือนโค้ดเดิม คือมีการทำ Pagination (.range)
+//         let queryItems = supabase.from('bookings').select('*', { count: 'exact' });
+//         queryItems = applyFilters(queryItems); // ใส่ตัวกรอง
+
+//         const from = (page - 1) * limit;
+//         const to = from + limit - 1;
+
+//         queryItems = queryItems
+//             .order('booking_date', { ascending: false })
+//             .order('slot_id', { ascending: true })
+//             .range(from, to); // ตัดหน้า
+
+//         // --- ส่วนที่ 3: คำสั่งดึงยอด KPI (Stats) ---
+//         // 🔥 อันนี้คือส่วนที่เพิ่มมาใหม่: ดึงเฉพาะ status ของ "ทั้งหมด" (ไม่ทำ Pagination)
+//         let queryStats = supabase.from('bookings').select('status, booking_date, slot_label');
+//         queryStats = applyFilters(queryStats); // ใช้ตัวกรองเดียวกับตาราง
+
+//         // --- ส่วนที่ 4: ยิงคำสั่งพร้อมกัน (Parallel Execution) ---
+//         const [resItems, resStats] = await Promise.all([
+//             queryItems,
+//             queryStats
+//         ]);
+
+//         if (resItems.error) throw resItems.error;
+//         if (resStats.error) throw resStats.error;
+
+//         // --- ส่วนที่ 5: คำนวณตัวเลข KPI ---
+//         // เอาข้อมูลดิบทั้งหมด มานับแยกประเภท
+//         const allData = resStats.data || [];
+//         const stats = {
+//             total: allData.length,
+//             waiting: allData.filter(b => b.status === 'BOOKED').length,
+//             checkedIn: allData.filter(b => b.status === 'CHECKED_IN').length,
+//             cancelled: allData.filter(b => b.status === 'CANCELLED').length
+//         };
+
+//         // --- ส่งข้อมูลกลับหน้าบ้าน ---
+//         return NextResponse.json({
+//             ok: true,
+//             items: resItems.data || [],
+//             total: resItems.count, // จำนวนรายการทั้งหมด (สำหรับ Pagination)
+//             page,
+//             limit,
+//             stats: stats, // ✅ ส่งยอด KPI ที่ถูกต้องกลับไปด้วย
+//             chartDataRaw: resStats.data || [] // ส่งข้อมูลดิบสำหรับทำกราฟไปด้วย
+//         });
+
+//     } catch (error) {
+//         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+//     }
+// }
+
+// ในไฟล์ src/app/api/admin/bookings/route.js
+
 
 export async function GET(request) {
     try {
@@ -87,50 +162,61 @@ export async function GET(request) {
         const date = searchParams.get('date');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const search = searchParams.get('search');
         const page = parseInt(searchParams.get('page')) || 1;
         const limit = parseInt(searchParams.get('limit')) || 50;
 
-        // --- ส่วนที่ 1: เตรียมตัวกรอง (Filter Logic) ---
-        // เราแยก Logic การกรองออกมา เพื่อเอาไปใช้กับทั้ง 2 คำสั่ง (ดึงข้อมูลใส่ตาราง และ ดึงตัวเลข KPI)
+        // ฟังก์ชันช่วยจัดการตัวกรอง (ใช้ซ้ำได้ทั้ง Items และ Stats)
         const applyFilters = (queryBuilder) => {
+            let q = queryBuilder;
+            // 1. กรองตามช่วงเวลา
             if (date) {
-                return queryBuilder.eq('booking_date', date);
+                q = q.eq('booking_date', date);
             } else if (startDate && endDate) {
-                return queryBuilder.gte('booking_date', startDate).lte('booking_date', endDate);
+                q = q.gte('booking_date', startDate).lte('booking_date', endDate);
             }
-            return queryBuilder;
+            // 2. 🔥 กรองตามคำค้นหา (ถ้ามี)
+            if (search) {
+                q = q.or(`customer_name.ilike.%${search}%,phone.ilike.%${search}%,booking_code.ilike.%${search}%`);
+            }
+            return q;
         };
 
-        // --- ส่วนที่ 2: คำสั่งดึงข้อมูลใส่ตาราง (Items) ---
-        // อันนี้เหมือนโค้ดเดิม คือมีการทำ Pagination (.range)
+        // --- ส่วนที่ 1: ดึงข้อมูลใส่ตาราง (มี Pagination) ---
+        // let queryItems = supabase.from('bookings').select('*', { count: 'exact' });
+        // queryItems = applyFilters(queryItems);
+
+        // const from = (page - 1) * limit;
+        // const to = from + limit - 1;
+
+        // const { data: items, count, error: err1 } = await queryItems
+        //     .order('booking_date', { ascending: false })
+        //     .order('slot_id', { ascending: true })
+        //     .range(from, to);
+        // --- ส่วนที่ 1: ดึงข้อมูลใส่ตาราง (Items) ---
         let queryItems = supabase.from('bookings').select('*', { count: 'exact' });
-        queryItems = applyFilters(queryItems); // ใส่ตัวกรอง
+        queryItems = applyFilters(queryItems);
 
         const from = (page - 1) * limit;
         const to = from + limit - 1;
 
-        queryItems = queryItems
+        const { data: items, count, error: err1 } = await queryItems
+            // 1. เรียงตามวันที่จอง (ใหม่ที่สุดขึ้นก่อน)
+            .order('created_at', { ascending: false })
+            // 2. ถ้าวันเดียวกัน ให้เรียงตามเวลาที่กดยืนยันจองจริง (ใครเพิ่งกดจองมาให้ขึ้นก่อน)
             .order('booking_date', { ascending: false })
-            .order('slot_id', { ascending: true })
-            .range(from, to); // ตัดหน้า
+            .range(from, to);
 
-        // --- ส่วนที่ 3: คำสั่งดึงยอด KPI (Stats) ---
-        // 🔥 อันนี้คือส่วนที่เพิ่มมาใหม่: ดึงเฉพาะ status ของ "ทั้งหมด" (ไม่ทำ Pagination)
+        if (err1) throw err1;
+
+        // --- ส่วนที่ 2: ดึงข้อมูลสรุป KPI (ไม่มี Pagination) ---
         let queryStats = supabase.from('bookings').select('status, booking_date, slot_label');
-        queryStats = applyFilters(queryStats); // ใช้ตัวกรองเดียวกับตาราง
+        queryStats = applyFilters(queryStats);
 
-        // --- ส่วนที่ 4: ยิงคำสั่งพร้อมกัน (Parallel Execution) ---
-        const [resItems, resStats] = await Promise.all([
-            queryItems,
-            queryStats
-        ]);
+        const { data: allData, error: err2 } = await queryStats;
+        if (err2) throw err2;
 
-        if (resItems.error) throw resItems.error;
-        if (resStats.error) throw resStats.error;
-
-        // --- ส่วนที่ 5: คำนวณตัวเลข KPI ---
-        // เอาข้อมูลดิบทั้งหมด มานับแยกประเภท
-        const allData = resStats.data || [];
+        // คำนวณ KPI จากข้อมูลที่ถูกกรองแล้ว
         const stats = {
             total: allData.length,
             waiting: allData.filter(b => b.status === 'BOOKED').length,
@@ -138,18 +224,18 @@ export async function GET(request) {
             cancelled: allData.filter(b => b.status === 'CANCELLED').length
         };
 
-        // --- ส่งข้อมูลกลับหน้าบ้าน ---
         return NextResponse.json({
             ok: true,
-            items: resItems.data || [],
-            total: resItems.count, // จำนวนรายการทั้งหมด (สำหรับ Pagination)
+            items: items || [],
+            total: count,
             page,
             limit,
-            stats: stats, // ✅ ส่งยอด KPI ที่ถูกต้องกลับไปด้วย
-            chartDataRaw: resStats.data || [] // ส่งข้อมูลดิบสำหรับทำกราฟไปด้วย
+            stats: stats,           // ✅ ส่งกลับไปเพื่อให้หน้าบ้านแสดงตัวเลขข้างบน
+            chartDataRaw: allData    // ✅ ส่งกลับไปเพื่อให้กราฟแสดงผล
         });
 
     } catch (error) {
+        console.error("API Error:", error);
         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
     }
 }
