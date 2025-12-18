@@ -1610,11 +1610,12 @@ export default function AdminPage() {
                                         <Legend /> {/* เพิ่ม Legend เพื่อบอกว่าสีไหนคืออะไร */}
 
 
-                                        <div className="h-[250px] w-[800px] flex justify-center"> {/* ใส่ relative เพื่อให้ข้อความอยู่ตรงกลาง */}
+                                        <div className="h-[300px] md:h-[250px]flex justify-center"> {/* ใส่ relative เพื่อให้ข้อความอยู่ตรงกลาง */}
                                             {chartData.length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     {(() => {
-                                                        const dynamicBarSize = viewMode === 'daily' ? 45 : 15;
+                                                        // const dynamicBarSize = viewMode === 'daily' ? 45 : 15;
+                                                        const dynamicBarSize = viewMode === 'daily' ? (typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 45) : 15;
                                                         return (
                                                             <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
