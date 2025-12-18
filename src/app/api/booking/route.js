@@ -317,6 +317,23 @@ export async function POST(request) {
 
         if (error) throw error;
 
+        // ✅ ส่ง LINE ยืนยันการจอง
+        if (lineUserId && lineUserId !== 'NO_LIFF') {
+            try {
+                const flexMessage = lineClient.createBookingFlex({
+                    code: newBookingCode,
+                    name: name,
+                    date: date,
+                    slot: slotLabel
+                });
+                await lineClient.push(lineUserId, flexMessage);
+                console.log("✅ Sent LINE confirmation to:", lineUserId);
+            } catch (lineErr) {
+                console.error("⚠️ Failed to send LINE:", lineErr);
+                // ไม่ throw error เดี๋ยวหน้าเว็บพัง ให้แค่ log warning
+            }
+        }
+
         return NextResponse.json({ ok: true, bookingCode: newBookingCode });
 
     } catch (error) {
