@@ -10,17 +10,7 @@ const supabase = createClient(
 // เพิ่มไว้ด้านบนสุดของไฟล์
 
 // ค้นหาช่วงที่ insert ข้อมูลสำเร็จ (หลังบรรยากาศ if (error) throw error;)
-if (data && data.length > 0) {
-    const booking = data[0];
-    // ตรวจสอบว่ามี line_user_id ไหมก่อนส่ง
-    if (booking.line_user_id) {
-        const ticketUrl = `https://liff.line.me/${process.env.VITE_LIFF_ID}/ticket?code=${booking.booking_code}`;
-        const msg = `✅ ลงทะเบียนจองคิวสำเร็จ!\nรหัส: ${booking.booking_code}\nวันที่: ${booking.booking_date}\nเวลา: ${booking.slot_label}\n\nดูบัตรคิวของคุณได้ที่นี่:\n${ticketUrl}`;
 
-        // สั่งส่ง Push Message หาผู้ใช้ทันที
-        await lineClient.push(booking.line_user_id, { type: "text", text: msg });
-    }
-}
 export async function POST(request) {
     try {
         const body = await request.json();
