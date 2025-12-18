@@ -354,6 +354,8 @@ export default function AdminPage() {
                             // หรือ 'User hasn't interacted with the document' แสดงว่าต้องคลิกหน้าจอเดิมก่อนครับ
                         });
                     // 1. เรียกโหลดข้อมูลใหม่แบบเงียบๆ (เพื่ออัปเดตเลข KPI/กราฟ)
+                    setSearchTerm("");
+                    setCurrentPage(1);
                     reloadData(true);
 
                     // 2. 🔥 แจ้งเตือน Toast มุมขวาบน
@@ -563,16 +565,38 @@ export default function AdminPage() {
         }
     };
 
+    // const filteredBookings = useMemo(() => {
+    //     return bookings.filter(b => {
+    //         const searchLower = searchTerm.toLowerCase();
+    //         const targetName = (b.name || b.customer_name || "").toLowerCase();
+    //         const targetCode = (b.code || b.booking_code || "").toLowerCase();
+
+    //         const matchSearch = targetName.includes(searchLower) ||
+    //             (b.phone || "").includes(searchTerm) ||
+    //             targetCode.includes(searchLower);
+    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
+    //         return matchSearch && matchStatus;
+    //     });
+    // }, [bookings, searchTerm, filterStatus]);
+
     const filteredBookings = useMemo(() => {
         return bookings.filter(b => {
-            const searchLower = searchTerm.toLowerCase();
-            const targetName = (b.name || b.customer_name || "").toLowerCase();
-            const targetCode = (b.code || b.booking_code || "").toLowerCase();
+            const searchLower = searchTerm.trim().toLowerCase();
 
-            const matchSearch = targetName.includes(searchLower) ||
-                (b.phone || "").includes(searchTerm) ||
+            // ดึงค่าเป้าหมายมาตรวจสอบ (ใช้ข้อมูลจาก bookings ที่ Map มาแล้ว)
+            const targetName = (b.name || "").toLowerCase();
+            const targetCode = (b.code || "").toLowerCase();
+            const targetPhone = (b.phone || "");
+
+            // กรองด้วยคำค้นหา (ชื่อ, เบอร์, หรือรหัสจอง)
+            const matchSearch = !searchLower ||
+                targetName.includes(searchLower) ||
+                targetPhone.includes(searchLower) ||
                 targetCode.includes(searchLower);
+
+            // กรองด้วยสถานะ (ALL, BOOKED, CHECKED_IN, CANCELLED)
             const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
+
             return matchSearch && matchStatus;
         });
     }, [bookings, searchTerm, filterStatus]);
@@ -1702,13 +1726,13 @@ export default function AdminPage() {
                             <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
                                 <div className="flex bg-gray-100 p-1 rounded-xl w-fit mt-2 ml-4 -mb-2 border border-gray-200">
                                     <button
-                                        onClick={() => { setViewMode("daily"); setCurrentPage(1); }}
+                                        onClick={() => { setViewMode("daily"); setCurrentPage(1);  setSearchTerm("");}}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         รายวัน
                                     </button>
                                     <button
-                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); }}
+                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm("");}}
                                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
                                     >
                                         รายเดือน
@@ -1884,14 +1908,15 @@ export default function AdminPage() {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            disabled={currentPage === 1 || loading}
-                                            onClick={() => setCurrentPage(prev => prev - 1)}
+                                            // disabled={currentPage === 1 || loading}
+                                            disabled={currentPage * 50 >= totalRecords || loading}
+                                            onClick={() => setCurrentPage(prev => prev + 1)}
                                             className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
                                         >
                                             ก่อนหน้า
                                         </button>
                                         <button
-                                            disabled={bookings.length < 20 || loading}
+                                            disabled={bookings.length < 50 || loading}
                                             onClick={() => setCurrentPage(prev => prev + 1)}
                                             className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
                                         >

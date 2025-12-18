@@ -88,7 +88,7 @@ export async function GET(request) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const page = parseInt(searchParams.get('page')) || 1;
-        const limit = parseInt(searchParams.get('limit')) || 20;
+        const limit = parseInt(searchParams.get('limit')) || 50;
 
         // --- ส่วนที่ 1: เตรียมตัวกรอง (Filter Logic) ---
         // เราแยก Logic การกรองออกมา เพื่อเอาไปใช้กับทั้ง 2 คำสั่ง (ดึงข้อมูลใส่ตาราง และ ดึงตัวเลข KPI)
