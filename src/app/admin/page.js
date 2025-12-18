@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from "qrcode.react";
+import { supabase } from "../../supabaseClient"; // เรียก Supabase
 
 import {
     adminLogin,
@@ -28,7 +29,7 @@ import {
     FiCheckCircle, FiXCircle, FiActivity, FiEdit2, FiLogOut,
     FiLayers, FiUsers, FiSearch, FiCheckSquare,
     FiCamera, FiImage, FiAlertTriangle, FiCameraOff, FiPlus, FiTrash2, FiPieChart, FiBarChart2,
-    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText, FiUser
+    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText, FiUser, FiArrowDownCircle,
 } from "react-icons/fi";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -111,140 +112,179 @@ export default function AdminPage() {
         }
     }, []);
 
-    // async function reloadData() {
+
+    // version reload realtime
+    // async function reloadData(isSilent = false) {
     //     if (!authToken) return;
-    //     setLoading(true);
+    //     if (!isSilent) setLoading(true);
+    //     // setLoading(true);
     //     try {
+    //         let urlBookings = "";
+
+    //         // 1. กำหนด URL ตามโหมดการดู
+    //         if (viewMode === "daily") {
+    //             urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`;
+    //         } else if (viewMode === "monthly") {
+    //             // คำนวณวันแรกและวันสุดท้ายของเดือน
+    //             const firstDay = new Date(date);
+    //             firstDay.setDate(1);
+    //             const lastDay = new Date(date);
+    //             lastDay.setMonth(lastDay.getMonth() + 1, 0);
+
+    //             const startStr = firstDay.toISOString().slice(0, 10);
+    //             const endStr = lastDay.toISOString().slice(0, 10);
+    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+    //         } else if (viewMode === "yearly") {
+    //             // 🔥 เพิ่มส่วนนี้: คำนวณวันแรกและวันสุดท้ายของ "ปี"
+    //             const currentYear = new Date(date).getFullYear();
+    //             const startStr = `${currentYear}-01-01`;
+    //             const endStr = `${currentYear}-12-31`;
+
+    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
+    //         } else {
+    //             // 🔥 โหมดทั้งหมด (All): ไม่ส่งวันที่ แต่ส่ง page/limit เหมือนเดิม
+    //             urlBookings = `/api/admin/bookings?page=${currentPage}&limit=20`;
+    //         }
+
+    //         // 2. ดึงข้อมูลทั้ง Bookings และ Slots พร้อมกัน
     //         const [resB, resS] = await Promise.all([
-    //             adminGetBookings(date, authToken),
+    //             fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
+    //             adminGetSlotsSummary(date, authToken) // ดึงข้อมูล Slot ของวันที่เลือก
+    //         ]);
+
+    //         if (resB.ok) {
+    //             const rawItems = resB.items || [];
+    //             const mappedBookings = rawItems.map(b => ({
+    //                 ...b,
+    //                 name: b.customer_name || b.name,
+    //                 code: b.booking_code || b.code,
+    //                 date: b.booking_date || b.date,
+    //                 slot: b.slot_label || b.slot,
+    //                 phone: b.phone,
+    //                 line_picture_url: b.line_picture_url || null
+    //             }));
+
+    //             setBookings(mappedBookings);
+    //             setTotalRecords(resB.total || 0);
+
+    //             if (resB.stats) {
+    //                 setServerStats(resB.stats);
+    //             }
+    //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
+    //         }
+
+    //         // 🔥 แก้ไขจุดนี้: ทำให้ข้อมูล Slot กลับมาแสดง
+    //         if (resS && resS.items) {
+    //             setSlots(resS.items);
+    //         }
+
+    //     } catch (err) {
+    //         console.error("Reload Error:", err);
+    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
+    //     } finally {
+    //         // setLoading(false);
+    //         if (!isSilent) setLoading(false);
+    //     }
+    // }
+    // แก้ไขฟังก์ชัน reloadData ในไฟล์ page.js
+    // async function reloadData(isSilent = false) {
+    //     if (!authToken) return;
+
+    //     // ถ้าไม่ใช่ Silent ให้โชว์ Loading (กันจอขาว)
+    //     if (!isSilent) setLoading(true);
+
+    //     try {
+    //         // สร้าง URL โดยใช้ค่าจาก State ปัจจุบันเสมอ
+    //         const urlBookings = viewMode === 'daily'
+    //             ? `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`
+    //             : `/api/admin/bookings?startDate=${dateRange.start}&endDate=${dateRange.end}&page=${currentPage}&limit=20`;
+
+    //         const [resB, resS] = await Promise.all([
+    //             adminGetBookings(urlBookings, authToken),
     //             adminGetSlotsSummary(date, authToken)
     //         ]);
 
-    //         // 🔥 FIX: แปลงข้อมูลจาก Supabase ให้เข้ากับ UI เดิม
-    //         const rawItems = resB.items || [];
-    //         const mappedBookings = rawItems.map(b => ({
-    //             ...b,
-    //             name: b.customer_name || b.name, // ใช้ customer_name ถ้ามี
-    //             code: b.booking_code || b.code,   // ใช้ booking_code ถ้ามี
-    //             date: b.booking_date || b.date,
-    //             slot: b.slot_label || b.slot
-    //         }));
+    //         if (resB.ok) {
+    //             // อัปเดตข้อมูลตาราง
+    //             setBookings(resB.items || []);
+    //             setTotalRecords(resB.total || 0);
 
-    //         setBookings(mappedBookings);
-    //         setSlots(resS.items || []);
+    //             // อัปเดต KPI และ กราฟ (ถ้า API ส่งมาให้)
+    //             if (resB.stats) setServerStats(resB.stats);
+    //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
+    //         }
+
+    //         if (resS.ok) {
+    //             setSlots(resS.items || []);
+    //         }
     //     } catch (err) {
-    //         console.error(err);
-    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
+    //         console.error("Reload Error:", err);
     //     } finally {
-    //         setLoading(false);
+    //         if (!isSilent) setLoading(false);
     //     }
     // }
 
-    // ปรับ reloadData ให้ส่งค่าหน้าปัจจุบันไปที่ API
-    // async function reloadData() {
-    //     if (!authToken) return;
-    //     setLoading(true);
-    //     try {
-    //         // เพิ่ม Parameter สำหรับ Pagination (ตัวอย่างหน้าละ 20)
-    //         const [resB, resS] = await Promise.all([
-    //             adminGetBookings(date, authToken),
-    //             adminGetSlotsSummary(date, authToken)
-    //         ]);
-    //         // const resB = await adminGetBookings(date, authToken);
-
-    //         const rawItems = resB.items || [];
-    //         const mappedBookings = rawItems.map(b => ({
-    //             ...b,
-    //             // 🔥 ตรวจสอบให้แน่ใจว่าชื่อฟิลด์ตรงกับใน Database
-    //             name: b.customer_name,
-    //             code: b.booking_code,
-    //             date: b.booking_date,
-    //             slot: b.slot_label,    // ชื่อรอบเวลา เช่น 09:00
-    //             phone: b.phone,
-    //             line_picture_url: b.line_picture_url // ดึงรูปโปรไฟล์มาด้วย
-    //         }));
-
-    //         setBookings(mappedBookings);
-    //         // เก็บค่า Total สำหรับทำ Pagination
-    //         setTotalRecords(resB.total || rawItems.length);
-    //         setSlots(resS.items || []);
-
-    //     } catch (err) {
-    //         console.error(err);
-    //         Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // }
-
-    async function reloadData() {
+    async function reloadData(isSilent = false) {
         if (!authToken) return;
-        setLoading(true);
+
+        // แสดง Loading เฉพาะตอนเปลี่ยนโหมด/วันที่ (ถ้า Real-time ให้โหลดเงียบๆ)
+        if (!isSilent) setLoading(true);
+
         try {
             let urlBookings = "";
 
-            // 1. กำหนด URL ตามโหมดการดู
+            // ✅ คง Logic การกรองเดิมของคุณไว้ทั้งหมด (ห้ามลบ)
             if (viewMode === "daily") {
                 urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=20`;
             } else if (viewMode === "monthly") {
-                // คำนวณวันแรกและวันสุดท้ายของเดือน
                 const firstDay = new Date(date);
                 firstDay.setDate(1);
                 const lastDay = new Date(date);
                 lastDay.setMonth(lastDay.getMonth() + 1, 0);
-
                 const startStr = firstDay.toISOString().slice(0, 10);
                 const endStr = lastDay.toISOString().slice(0, 10);
                 urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
             } else if (viewMode === "yearly") {
-                // 🔥 เพิ่มส่วนนี้: คำนวณวันแรกและวันสุดท้ายของ "ปี"
                 const currentYear = new Date(date).getFullYear();
                 const startStr = `${currentYear}-01-01`;
                 const endStr = `${currentYear}-12-31`;
-
                 urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=20`;
             } else {
-                // 🔥 โหมดทั้งหมด (All): ไม่ส่งวันที่ แต่ส่ง page/limit เหมือนเดิม
                 urlBookings = `/api/admin/bookings?page=${currentPage}&limit=20`;
             }
 
-            // 2. ดึงข้อมูลทั้ง Bookings และ Slots พร้อมกัน
             const [resB, resS] = await Promise.all([
                 fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
-                adminGetSlotsSummary(date, authToken) // ดึงข้อมูล Slot ของวันที่เลือก
+                adminGetSlotsSummary(date, authToken)
             ]);
 
             if (resB.ok) {
-                const rawItems = resB.items || [];
-                const mappedBookings = rawItems.map(b => ({
+                // 1. อัปเดตตารางรายการ
+                setBookings((resB.items || []).map(b => ({
                     ...b,
                     name: b.customer_name || b.name,
                     code: b.booking_code || b.code,
                     date: b.booking_date || b.date,
                     slot: b.slot_label || b.slot,
-                    phone: b.phone,
-                    line_picture_url: b.line_picture_url || null
-                }));
-
-                setBookings(mappedBookings);
+                    phone: b.phone
+                })));
                 setTotalRecords(resB.total || 0);
 
-                if (resB.stats) {
-                    setServerStats(resB.stats);
-                }
+                // 🔥 2. อัปเดตตัวเลข KPI และ ข้อมูลกราฟ (เพื่อให้ Real-time จริงๆ)
+                if (resB.stats) setServerStats(resB.stats);
                 if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
             }
 
-            // 🔥 แก้ไขจุดนี้: ทำให้ข้อมูล Slot กลับมาแสดง
+            if (resS.ok) {
+                setSlots(resS.items || []);
+            }
             if (resS && resS.items) {
                 setSlots(resS.items);
             }
-
         } catch (err) {
             console.error("Reload Error:", err);
-            Toast.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ' });
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }
 
@@ -254,13 +294,91 @@ export default function AdminPage() {
             .catch(err => console.error("Load dates error:", err));
     };
 
-    // useEffect(() => { if (authToken) { reloadData(); loadDates(); } }, [date, authToken]);
     useEffect(() => {
         if (authToken) {
             reloadData();
             loadDates();
+            //     const interval = setInterval(() => {
+            //         // ส่ง true เข้าไปเพื่อให้เป็น Silent Reload (ไม่ขึ้นตัวหมุน Loading)
+            //         reloadData(true);
+            //     }, 20000); // 20000 ms = 20 วินาที (ปรับลดได้ตามความเหมาะสม)
+
+            //     // 3. สำคัญมาก: ต้องล้างค่าเมื่อปิดหน้าจอเพื่อไม่ให้เครื่องค้าง
+            //     return () => clearInterval(interval);
         }
     }, [date, authToken, viewMode, currentPage]);
+
+
+
+    // useEffect(() => {
+    //     if (!authToken) return;
+
+    //     const channel = supabase
+    //         .channel('admin_dashboard_realtime')
+    //         .on(
+    //             'postgres_changes',
+    //             { event: 'INSERT', schema: 'public', table: 'bookings' },
+    //             (payload) => {
+    //                 console.log("New booking detected!");
+    //                 // เรียกใช้ reloadData(true) เพื่อโหลดใหม่แบบเงียบๆ
+    //                 reloadData(true);
+    //             }
+    //         )
+    //         .subscribe();
+
+    //     return () => {
+    //         supabase.removeChannel(channel);
+    //     };
+    //     // เพิ่ม dependencies ให้ครบ
+    // }, [authToken, date, viewMode, currentPage]);
+
+    useEffect(() => {
+        if (!authToken) return;
+
+        const channel = supabase
+            .channel('admin_realtime_with_toast')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'bookings' },
+                (payload) => {
+                    console.log("จองใหม่!", payload);
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                    audio.play()
+                        .then(() => console.log("เล่นเสียงสำเร็จ"))
+                        .catch(e => {
+                            console.error("เสียงไม่ดังเพราะ:", e.message);
+                            // ถ้าขึ้นว่า 'The play() request was interrupted by a call to pause()' 
+                            // หรือ 'User hasn't interacted with the document' แสดงว่าต้องคลิกหน้าจอเดิมก่อนครับ
+                        });
+                    // 1. เรียกโหลดข้อมูลใหม่แบบเงียบๆ (เพื่ออัปเดตเลข KPI/กราฟ)
+                    reloadData(true);
+
+                    // 2. 🔥 แจ้งเตือน Toast มุมขวาบน
+                    const newCustomer = payload.new?.customer_name || "ลูกค้าใหม่";
+                    const slotTime = payload.new?.slot_label || "";
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end', // แจ้งเตือนมุมขวาบน
+                        icon: 'info',
+                        title: `มีการจองใหม่: ${newCustomer}`,
+                        text: `รอบเวลา: ${slotTime}`,
+                        showConfirmButton: false,
+                        timer: 4000, // แสดงค้างไว้ 4 วินาที
+                        timerProgressBar: true,
+                        background: '#ffffff',
+                        color: '#064e3b',
+                        iconColor: '#10B981',
+
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [authToken, viewMode, date, currentPage]);
 
     async function handleLogin(e) {
         e.preventDefault();
@@ -326,12 +444,20 @@ export default function AdminPage() {
 
             // อัปเดตตารางโดยไม่ต้องโหลดใหม่
             setBookings(prev => prev.map(b => (b.code === targetCode || b.booking_code === targetCode) ? { ...b, status: newStatus } : b));
+            // ✅ 2. อัปเดตตัวเลขในสล้อต (จัดการคิวขวามือ)
+            if (newStatus === 'CANCELLED') {
+                setSlots(prev => prev.map(s => s.label === booking.slot_label ? {
+                    ...s,
+                    booked: Math.max(0, s.booked - 1),
+                    remaining: s.remaining + 1
+                } : s));
+            }
 
             // ถ้าหน้าสแกนเปิดอยู่ ก็อัปเดตด้วย
             if (scanData && (scanData.code === targetCode || scanData.booking_code === targetCode)) {
                 setScanData(prev => ({ ...prev, status: newStatus }));
             }
-
+            await reloadData(true);
             Toast.fire({ icon: 'success', title: `บันทึกสถานะเรียบร้อย` });
             // reloadData();
 
@@ -1408,65 +1534,53 @@ export default function AdminPage() {
                                     {viewMode === 'all' && 'แนวโน้มการจองทั้งหมด (ภาพรวม)'}
                                 </h3>
                                 <div className="h-[250px] w-full">
-                                    {/* <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name"
-                                                fontSize={12}
-                                                tick={{ fontSize: 10 }} />
-                                            <YAxis allowDecimals={false}
-                                                fontSize={12} />
-                                            <Tooltip cursor={{ fill: '#f0fdf4' }}
-                                                contentStyle={{ borderRadius: '8px' }}
-                                                labelStyle={{
-                                                    color: '#064e3b',
-                                                    fontWeight: 'bold'
-                                                }} />
-                                            <Bar dataKey="count" name="จำนวน" fill="#059669" radius={[4, 4, 0, 0]} barSize={40} activeBar={{ fill: '#047857' }} />
-                                        </BarChart>
-                                    </ResponsiveContainer> */}
 
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" fontSize={12} tick={{ fontSize: 10 }} />
-                                            <YAxis allowDecimals={false} fontSize={12} />
-                                            <Tooltip
-                                                cursor={{ fill: '#f0fdf4' }}
-                                                contentStyle={{ borderRadius: '8px' }}
-                                                labelStyle={{ color: '#064e3b', fontWeight: 'bold' }}
-                                            />
-                                            <Legend /> {/* เพิ่ม Legend เพื่อบอกว่าสีไหนคืออะไร */}
+                                        {/* <BarChart data={chartData}> */}
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" fontSize={12} tick={{ fontSize: 10 }} />
+                                        <YAxis allowDecimals={false} fontSize={12} />
+                                        <Tooltip
+                                            cursor={{ fill: '#f0fdf4' }}
+                                            contentStyle={{ borderRadius: '8px' }}
+                                            labelStyle={{ color: '#064e3b', fontWeight: 'bold' }}
+                                        />
+                                        <Legend /> {/* เพิ่ม Legend เพื่อบอกว่าสีไหนคืออะไร */}
 
-                                            {/* 🔥 เปลี่ยนเป็น 3 แท่งนี้ครับ */}
-                                            {/* stackId="a" คือสั่งให้มันซ้อนกัน ถ้าเอาออกมันจะวางเรียงข้างๆ กัน */}
 
-                                            <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} barSize={40} />
-                                            <Bar dataKey="BOOKED" name="รอรับบริการ" stackId="a" fill="#EAB308" radius={[0, 0, 0, 0]} barSize={40} />
-                                            <Bar dataKey="CANCELLED" name="ยกเลิก" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={40} />
-                                            {/* 🔥 แบบแยกแท่ง: ลบ stackId="a" ออกให้หมดครับ */}
-                                            {/* <Bar
-                                                dataKey="CHECKED_IN"
-                                                name="เช็คอินแล้ว"
-                                                fill="#10B981"
-                                                radius={[4, 4, 0, 0]} // ใส่โค้งมนด้านบนให้สวยงาม
-                                                barSize={12} // ⚠️ ปรับขนาดให้เล็กลงหน่อย ไม่งั้นจะเบียดกัน
-                                            />
-                                            <Bar
-                                                dataKey="BOOKED"
-                                                name="รอรับบริการ"
-                                                fill="#EAB308"
-                                                radius={[4, 4, 0, 0]}
-                                                barSize={12}
-                                            />
-                                            <Bar
-                                                dataKey="CANCELLED"
-                                                name="ยกเลิก"
-                                                fill="#EF4444"
-                                                radius={[4, 4, 0, 0]}
-                                                barSize={12}
-                                            /> */}
-                                        </BarChart>
+                                        <div className="h-[250px] w-[800px] flex justify-center"> {/* ใส่ relative เพื่อให้ข้อความอยู่ตรงกลาง */}
+                                            {chartData.length > 0 ? (
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    {(() => {
+                                                        const dynamicBarSize = viewMode === 'daily' ? 45 : 15;
+                                                        return (
+                                                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                                                <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
+                                                                <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
+                                                                <Tooltip
+                                                                    cursor={{ fill: '#f8fafc' }}
+                                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                                />
+                                                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                                                                <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                                <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                                <Bar dataKey="CANCELLED" name="ยกเลิก" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                            </BarChart>
+                                                        );
+                                                    })()}
+                                                </ResponsiveContainer>
+                                            ) : (
+
+                                                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                                                    <FiBarChart2 className="text-4xl mb-2 opacity-20" />
+                                                    <p className="text-sm font-medium">ไม่พบข้อมูลสถิติในช่วงเวลาที่เลือก</p>
+                                                    <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+
+                                                </div>
+                                            )}
+                                        </div>
+
                                     </ResponsiveContainer>
                                 </div>
                             </div>
@@ -1475,17 +1589,26 @@ export default function AdminPage() {
                                     <FiPieChart /> สัดส่วนสถานะ
                                 </h3>
                                 <div className="h-[250px] w-full flex justify-center">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={pieData} cx="50%" cy="50%"
-                                                innerRadius={50} outerRadius={80}
-                                                paddingAngle={5} dataKey="value">
-                                                {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                                            </Pie>
-                                            <Tooltip />
-                                            <Legend verticalAlign="bottom" height={36} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                    {pieData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie data={pieData} cx="50%" cy="50%"
+                                                    innerRadius={50} outerRadius={80}
+                                                    paddingAngle={5} dataKey="value">
+                                                    {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                                </Pie>
+                                                <Tooltip />
+                                                <Legend verticalAlign="bottom" height={36} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                                            <FiPieChart className="text-4xl mb-2 opacity-20" />
+                                            <p className="text-sm font-medium">ไม่มีข้อมูลสัดส่วน</p>
+                                            <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1535,7 +1658,7 @@ export default function AdminPage() {
                                         </div>
 
                                         {/* 2. Dropdown เลือกสถานะ - ปรับขนาดใหญ่ขึ้นให้เท่ากับ Input */}
-                                        <div className="relative w-full md:w-[110px] group">
+                                        <div className="relative w-full md:w-[130px] group">
                                             <select
                                                 className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center"
                                                 value={filterStatus}
