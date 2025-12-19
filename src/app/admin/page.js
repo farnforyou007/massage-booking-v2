@@ -105,6 +105,7 @@ export default function AdminPage() {
     const [totalRecords, setTotalRecords] = useState(0);
     const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 }); // 🔥 เพิ่มบรรทัดนี้
     const [chartRaw, setChartRaw] = useState([]); // เก็บข้อมูลดิบสำหรับกราฟ
+
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
@@ -327,6 +328,32 @@ export default function AdminPage() {
         }
     }, [date, authToken, viewMode, currentPage]);
 
+
+
+
+    // ✅ 2. ย้าย Logic ปลดล็อกเสียงเข้ามาใน useEffect
+    useEffect(() => {
+        // ฟังก์ชันปลดล็อกเสียง
+        const unlockAudio = () => {
+            const audio = new Audio('/alert.mp3');
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(() => { }); // ปล่อยผ่านถ้า error
+
+            // ลบ Event ทิ้งหลังจากคลิกครั้งแรกแล้ว
+            document.removeEventListener('click', unlockAudio);
+        };
+
+        // สั่งให้รอฟังการคลิก (ทำในนี้ได้ เพราะ useEffect รันบน Browser เท่านั้น)
+        document.addEventListener('click', unlockAudio);
+
+        // Cleanup function (เผื่อ component ถูกปิดไปก่อน)
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+        };
+    }, []);
+
     useEffect(() => {
         if (!authToken) return;
 
@@ -337,7 +364,8 @@ export default function AdminPage() {
                 { event: 'INSERT', schema: 'public', table: 'bookings' },
                 (payload) => {
                     console.log("จองใหม่!", payload);
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                    const audio = new Audio('/alert.mp3');
+                    // const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
                     audio.play()
                         .then(() => console.log("เล่นเสียงสำเร็จ"))
                         .catch(e => {
@@ -1783,10 +1811,10 @@ export default function AdminPage() {
                                         </thead>
                                         <tbody className="text-sm divide-y divide-gray-50">
                                             {filteredBookings.length > 0 ? (
-                                            // {bookings.length > 0 ? (
+                                                // {bookings.length > 0 ? (
                                                 // filteredBookings.map((b, i) => (
                                                 filteredBookings.map((b, i) => {
-                                                // bookings.map((b, i) => {
+                                                    // bookings.map((b, i) => {
                                                     const rowNumber = ((currentPage - 1) * 50) + (i + 1);
 
                                                     return (

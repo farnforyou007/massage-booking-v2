@@ -231,7 +231,7 @@ const supabase = createClient(
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { name, phone, date, slot_id, slotLabel, lineUserId } = body;
+        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
 
         // -----------------------------------------------------------------------
         // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
@@ -313,7 +313,7 @@ export async function POST(request) {
             booking_code: newBookingCode,
             line_user_id: lineUserId || 'NO_LIFF',
             status: 'BOOKED',
-            line_picture_url: line_picture_url
+            line_picture_url: line_picture_url || 'No line picture'
         }]);
 
         if (error) throw error;
