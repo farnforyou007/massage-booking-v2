@@ -151,7 +151,7 @@ export default function Home() {
           setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
         } else {
-          // liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
+          liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
@@ -298,7 +298,8 @@ export default function Home() {
                     <p><strong>เบอร์โทร:</strong>  ${cleanPhone}</p>
                 </div>
             `,
-      icon: "question", showCancelButton: true, confirmButtonText: "ยืนยัน", confirmButtonColor: "#047857"
+      icon: "question", showCancelButton: true, confirmButtonText: "ยืนยัน", confirmButtonColor: "#047857",
+      canclelButtonText: "ยกเลิก"
     });
 
     if (!confirm.isConfirmed) return;

@@ -312,7 +312,8 @@ export async function POST(request) {
             slot_label: slotLabel,
             booking_code: newBookingCode,
             line_user_id: lineUserId || 'NO_LIFF',
-            status: 'BOOKED'
+            status: 'BOOKED',
+            line_picture_url: line_picture_url
         }]);
 
         if (error) throw error;
