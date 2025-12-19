@@ -103,9 +103,9 @@ export default function AdminPage() {
     const [viewMode, setViewMode] = useState("daily"); // "daily" หรือ "monthly"
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 }); // 🔥 เพิ่มบรรทัดนี้
+    const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 });
     const [chartRaw, setChartRaw] = useState([]); // เก็บข้อมูลดิบสำหรับกราฟ
-
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
@@ -118,71 +118,6 @@ export default function AdminPage() {
         notificationAudio.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     }, []);
     // version reload realtime
-
-
-    // async function reloadData(isSilent = false) {
-    //     if (!authToken) return;
-
-    //     // แสดง Loading เฉพาะตอนเปลี่ยนโหมด/วันที่ (ถ้า Real-time ให้โหลดเงียบๆ)
-    //     if (!isSilent) setLoading(true);
-
-    //     try {
-    //         let urlBookings = "";
-
-    //         // ✅ คง Logic การกรองเดิมของคุณไว้ทั้งหมด (ห้ามลบ)
-    //         if (viewMode === "daily") {
-    //             urlBookings = `/api/admin/bookings?date=${date}&page=${currentPage}&limit=50`;
-    //         } else if (viewMode === "monthly") {
-    //             const firstDay = new Date(date);
-    //             firstDay.setDate(1);
-    //             const lastDay = new Date(date);
-    //             lastDay.setMonth(lastDay.getMonth() + 1, 0);
-    //             const startStr = firstDay.toISOString().slice(0, 10);
-    //             const endStr = lastDay.toISOString().slice(0, 10);
-    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
-    //         } else if (viewMode === "yearly") {
-    //             const currentYear = new Date(date).getFullYear();
-    //             const startStr = `${currentYear}-01-01`;
-    //             const endStr = `${currentYear}-12-31`;
-    //             urlBookings = `/api/admin/bookings?startDate=${startStr}&endDate=${endStr}&page=${currentPage}&limit=50`;
-    //         } else {
-    //             urlBookings = `/api/admin/bookings?page=${currentPage}&limit=50`;
-    //         }
-
-    //         const [resB, resS] = await Promise.all([
-    //             fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json()),
-    //             adminGetSlotsSummary(date, authToken)
-    //         ]);
-
-    //         if (resB.ok) {
-    //             // 1. อัปเดตตารางรายการ
-    //             setBookings((resB.items || []).map(b => ({
-    //                 ...b,
-    //                 name: b.customer_name || b.name,
-    //                 code: b.booking_code || b.code,
-    //                 date: b.booking_date || b.date,
-    //                 slot: b.slot_label || b.slot,
-    //                 phone: b.phone
-    //             })));
-    //             setTotalRecords(resB.total || 0);
-
-    //             // 🔥 2. อัปเดตตัวเลข KPI และ ข้อมูลกราฟ (เพื่อให้ Real-time จริงๆ)
-    //             if (resB.stats) setServerStats(resB.stats);
-    //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
-    //         }
-
-    //         if (resS.ok) {
-    //             setSlots(resS.items || []);
-    //         }
-    //         if (resS && resS.items) {
-    //             setSlots(resS.items);
-    //         }
-    //     } catch (err) {
-    //         console.error("Reload Error:", err);
-    //     } finally {
-    //         if (!isSilent) setLoading(false);
-    //     }
-    // }
 
     // // version2 18/12/68
     // async function reloadData(isSilent = false) {
@@ -235,6 +170,75 @@ export default function AdminPage() {
     // }
 
     // version3 19/12/68
+    // async function reloadData(isSilent = false) {
+    //     if (!authToken) return;
+    //     if (!isSilent) setLoading(true);
+
+    //     try {
+    //         let urlBookings = "";
+
+    //         // ✅ ตั้งค่าพื้นฐาน (ส่ง search ไปด้วยเสมอ ถ้ามี)
+    //         // const baseParams = `page=${currentPage}&limit=50&search=${encodeURIComponent(searchTerm)}`;
+
+
+    //         // เพิ้มใหม่ 10.55 19/12/68
+    //         let baseParams = `page=${currentPage}&limit=50&search=${encodeURIComponent(searchTerm)}`;
+    //         if (sortConfig.key) {
+    //             baseParams += `&sortKey=${sortConfig.key}&sortDir=${sortConfig.direction}`;
+    //         }
+    //         // =======
+    //         // 👇 Logic: ค้นหา "ตามขอบเขตที่เลือกอยู่"
+    //         if (viewMode === "daily") {
+    //             // ถ้าอยู่รายวัน -> ค้นหาเฉพาะใน "วันที่เลือก"
+    //             urlBookings = `/api/admin/bookings?date=${date}&${baseParams}`;
+
+    //         } else if (viewMode === "monthly") {
+    //             // ถ้าอยู่รายเดือน -> ค้นหาเฉพาะใน "เดือนที่เลือก"
+    //             const firstDay = new Date(date); firstDay.setDate(1);
+    //             const lastDay = new Date(date); lastDay.setMonth(lastDay.getMonth() + 1, 0);
+    //             urlBookings = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&${baseParams}`;
+
+    //         } else if (viewMode === "yearly") {
+    //             // ถ้าอยู่รายปี -> ค้นหาเฉพาะใน "ปีที่เลือก"
+    //             const currentYear = new Date(date).getFullYear();
+    //             urlBookings = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&${baseParams}`;
+
+    //         } else {
+    //             // ✅ ถ้าเลือกโหมด "ทั้งหมด" -> ค้นหาทั้ง Database (Global Search)
+    //             urlBookings = `/api/admin/bookings?${baseParams}`;
+    //         }
+
+    //         const resB = await fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+    //         const resS = await adminGetSlotsSummary(date, authToken);
+
+    //         if (resB.ok) {
+    //             setBookings((resB.items || []).map(b => ({
+    //                 ...b,
+    //                 name: b.customer_name || b.name,
+    //                 code: b.booking_code || b.code,
+    //                 date: b.booking_date || b.date,
+    //                 slot: b.slot_label || b.slot,
+    //                 phone: b.phone
+    //             })));
+    //             setTotalRecords(resB.total || 0);
+
+    //             // อัปเดต KPI และ กราฟ
+    //             if (resB.stats) setServerStats(resB.stats);
+    //             if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
+    //         }
+
+    //         if (resS && resS.items) {
+    //             setSlots(resS.items);
+    //         }
+    //     } catch (err) {
+    //         console.error("Reload Error:", err);
+    //     } finally {
+    //         if (!isSilent) setLoading(false);
+    //     }
+    // }
+
+
+    // version4 19/12/68 10.59
     async function reloadData(isSilent = false) {
         if (!authToken) return;
         if (!isSilent) setLoading(true);
@@ -242,27 +246,25 @@ export default function AdminPage() {
         try {
             let urlBookings = "";
 
-            // ✅ ตั้งค่าพื้นฐาน (ส่ง search ไปด้วยเสมอ ถ้ามี)
-            const baseParams = `page=${currentPage}&limit=50&search=${encodeURIComponent(searchTerm)}`;
+            // 🔥 แก้ตรงนี้: เปลี่ยน const เป็น let เพื่อให้ต่อท้าย string ได้
+            let baseParams = `page=${currentPage}&limit=50&search=${encodeURIComponent(searchTerm)}`;
+
+            // ถ้ามีการกดหัวตาราง (sortConfig มีค่า) ให้เติมพารามิเตอร์ส่งไปหา API
+            if (sortConfig.key) {
+                baseParams += `&sortKey=${sortConfig.key}&sortDir=${sortConfig.direction}`;
+            }
 
             // 👇 Logic: ค้นหา "ตามขอบเขตที่เลือกอยู่"
             if (viewMode === "daily") {
-                // ถ้าอยู่รายวัน -> ค้นหาเฉพาะใน "วันที่เลือก"
                 urlBookings = `/api/admin/bookings?date=${date}&${baseParams}`;
-
             } else if (viewMode === "monthly") {
-                // ถ้าอยู่รายเดือน -> ค้นหาเฉพาะใน "เดือนที่เลือก"
                 const firstDay = new Date(date); firstDay.setDate(1);
                 const lastDay = new Date(date); lastDay.setMonth(lastDay.getMonth() + 1, 0);
                 urlBookings = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&${baseParams}`;
-
             } else if (viewMode === "yearly") {
-                // ถ้าอยู่รายปี -> ค้นหาเฉพาะใน "ปีที่เลือก"
                 const currentYear = new Date(date).getFullYear();
                 urlBookings = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&${baseParams}`;
-
             } else {
-                // ✅ ถ้าเลือกโหมด "ทั้งหมด" -> ค้นหาทั้ง Database (Global Search)
                 urlBookings = `/api/admin/bookings?${baseParams}`;
             }
 
@@ -280,7 +282,6 @@ export default function AdminPage() {
                 })));
                 setTotalRecords(resB.total || 0);
 
-                // อัปเดต KPI และ กราฟ
                 if (resB.stats) setServerStats(resB.stats);
                 if (resB.chartDataRaw) setChartRaw(resB.chartDataRaw);
             }
@@ -295,17 +296,32 @@ export default function AdminPage() {
         }
     }
 
-    // useEffect(() => {
-    //     if (authToken) {
-    //         // หน่วงเวลาการค้นหานิดนึง (Debounce) เพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
-    //         const delayDebounceFn = setTimeout(() => {
-    //             reloadData();
-    //         }, 500);
+    // ฟังก์ชันจัดการเมื่อกดหัวตาราง
+    const handleSort = (key) => {
+        let direction = 'asc';
 
-    //         return () => clearTimeout(delayDebounceFn);
-    //     }
-    // }, [date, authToken, viewMode, currentPage, searchTerm]); 
-    // // 🔥 เพิ่ม searchTerm ตรงนี้
+        // ถ้ากดปุ่มเดิมซ้ำ ให้สลับทิศทาง (asc -> desc -> default)
+        if (sortConfig.key === key) {
+            if (sortConfig.direction === 'asc') {
+                direction = 'desc';
+            } else if (sortConfig.direction === 'desc') {
+                // ถ้ากดซ้ำอีกที ให้ยกเลิกการเรียง (กลับไปใช้ Default)
+                setSortConfig({ key: null, direction: null });
+                return;
+            }
+        }
+
+        setSortConfig({ key, direction });
+    };
+
+    // Helper สำหรับแสดงลูกศร
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <span className="text-gray-300 ml-1 text-[10px]">↕</span>;
+        return sortConfig.direction === 'asc'
+            ? <span className="text-emerald-600 ml-1 text-[10px]">▲</span>
+            : <span className="text-emerald-600 ml-1 text-[10px]">▼</span>;
+    };
+
     useEffect(() => {
         if (authToken) {
             const delaySearch = setTimeout(() => {
@@ -313,7 +329,7 @@ export default function AdminPage() {
             }, 500); // หน่วงเวลา 0.5 วินาทีเพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
             return () => clearTimeout(delaySearch);
         }
-    }, [date, authToken, viewMode, currentPage, searchTerm]); // 🔥 เพิ่ม searchTerm ตรงนี้
+    }, [date, authToken, viewMode, currentPage, searchTerm, sortConfig]); // 🔥 เพิ่ม searchTerm ตรงนี้
     const loadDates = () => {
         getManageDates()
             .then(res => { if (res.items) setManageDates(res.items); })
@@ -1797,7 +1813,7 @@ export default function AdminPage() {
                                 </div>
                                 <div className="flex-1 overflow-auto">
                                     <table className="w-full text-left">
-                                        <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
+                                        {/* <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
                                             <tr>
                                                 <th className="px-4 py-3 text-center w-16">ลำดับ</th>
                                                 {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all')
@@ -1806,6 +1822,41 @@ export default function AdminPage() {
                                                 <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
                                                 <th className="px-4 py-3">เบอร์โทร</th>
                                                 <th className="px-4 py-3">สถานะ</th>
+                                                <th className="px-4 py-3 text-right">จัดการ</th>
+                                            </tr>
+                                        </thead> */}
+
+                                        <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
+                                            <tr>
+                                                <th className="px-4 py-3 text-center w-16">ลำดับ</th>
+
+                                                {/* วันที่จอง */}
+                                                {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
+                                                    <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('date')}>
+                                                        <div className="flex items-center">วันที่จอง {getSortIcon('date')}</div>
+                                                    </th>
+                                                )}
+
+                                                {/* เวลา */}
+                                                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('slot')}>
+                                                    <div className="flex items-center">เวลา {getSortIcon('slot')}</div>
+                                                </th>
+
+                                                {/* ชื่อ */}
+                                                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('name')}>
+                                                    <div className="flex items-center">ชื่อ-สกุล / รหัส {getSortIcon('name')}</div>
+                                                </th>
+
+                                                {/* เบอร์โทร */}
+                                                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('phone')}>
+                                                    <div className="flex items-center">เบอร์โทร {getSortIcon('phone')}</div>
+                                                </th>
+
+                                                {/* สถานะ */}
+                                                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('status')}>
+                                                    <div className="flex items-center">สถานะ {getSortIcon('status')}</div>
+                                                </th>
+
                                                 <th className="px-4 py-3 text-right">จัดการ</th>
                                             </tr>
                                         </thead>
