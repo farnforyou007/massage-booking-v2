@@ -19,24 +19,57 @@ export default function MyHistoryPage() {
     const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
     // 1. เริ่มต้น LIFF เพื่อเอา User ID
+    // useEffect(() => {
+    //     const initLiff = async () => {
+    //         try {
+    //             // ใส่ LIFF ID ของหน้านี้ (ต้องไปสร้างใน LINE Developers)
+    //             await liff.init({ liffId: LIFF_ID });
+
+    //             if (liff.isLoggedIn()) {
+    //                 const profile = await liff.getProfile();
+    //                 setProfile(profile);
+    //                 fetchMyBookings(profile.userId); // ดึงข้อมูลทันทีที่ได้ ID
+    //             } else {
+    //                 liff.login();
+    //             }
+    //         } catch (err) {
+    //             console.error("LIFF Error:", err);
+    //             setLoading(false);
+    //             // (Option) สำหรับทดสอบในคอม ถ้าไม่มี LIFF ให้ลอง Hardcode ID ตัวเองดู
+    //             fetchMyBookings("2008703655-Q4b7ke69"); 
+    //         }
+    //     };
+    //     initLiff();
+    // }, [LIFF_ID]);
+
+    // src/app/history/page.js
+
     useEffect(() => {
         const initLiff = async () => {
             try {
-                // ใส่ LIFF ID ของหน้านี้ (ต้องไปสร้างใน LINE Developers)
-                await liff.init({ liffId: "LIFF_ID" });
+                // ⚠️ ใส่ LIFF ID ของคุณตรงนี้ (ถ้ายังไม่มี ให้เว้นว่างไว้ก่อนก็ได้ถ้าจะทดสอบแบบ Hardcode)
+                await liff.init({ liffId: LIFF_ID });
 
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     setProfile(profile);
-                    fetchMyBookings(profile.userId); // ดึงข้อมูลทันทีที่ได้ ID
+                    fetchMyBookings(profile.userId);
                 } else {
-                    liff.login();
+                    // ❌ ถ้าไม่ได้ Login (เช่น เปิดบนคอม) ไม่ต้องสั่ง Login ให้เด้งไปมา
+                    liff.login(); 
+
+                    // ✅ ให้ใช้ ID จำลองแทน (สำหรับทดสอบ)
+                    // console.log("Testing Mode: Using Mock User ID");
+                    // const mockUserId = "Ub6adb124adc4d092321d6681b72bcce9"; // <--- ใส่ User ID ที่มีอยู่จริงใน Database ของคุณตรงนี้
+                    fetchMyBookings(mockUserId);
+                    setProfile({ displayName: "Test User", pictureUrl: "" });
                 }
             } catch (err) {
                 console.error("LIFF Error:", err);
-                setLoading(false);
-                // (Option) สำหรับทดสอบในคอม ถ้าไม่มี LIFF ให้ลอง Hardcode ID ตัวเองดู
-                // fetchMyBookings("U1234567890..."); 
+
+                // ✅ กรณี LIFF Error (เช่น ไม่ได้ใส่ ID) ก็ให้ใช้ Mock ID เหมือนกัน
+                // const mockUserId = "Ub6adb124adc4d092321d6681b72bcce9"; // <--- ใส่ User ID เดียวกับข้างบน
+                // fetchMyBookings(mockUserId);
             }
         };
         initLiff();
