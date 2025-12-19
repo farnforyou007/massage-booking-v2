@@ -16,36 +16,27 @@ export default function MyHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("upcoming"); // upcoming | history
     const [profile, setProfile] = useState(null);
+    const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
     // 1. เริ่มต้น LIFF เพื่อเอา User ID
-    // src/app/history/page.js
-
     useEffect(() => {
         const initLiff = async () => {
             try {
-                // ⚠️ ใส่ LIFF ID ของคุณตรงนี้ (ถ้ายังไม่มี ให้เว้นว่างไว้ก่อนก็ได้ถ้าจะทดสอบแบบ Hardcode)
-                await liff.init({ liffId: "YOUR_LIFF_ID" });
+                // ใส่ LIFF ID ของหน้านี้ (ต้องไปสร้างใน LINE Developers)
+                await liff.init({ liffId: "LIFF_ID" });
 
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     setProfile(profile);
-                    fetchMyBookings(profile.userId);
+                    fetchMyBookings(profile.userId); // ดึงข้อมูลทันทีที่ได้ ID
                 } else {
-                    // ❌ ถ้าไม่ได้ Login (เช่น เปิดบนคอม) ไม่ต้องสั่ง Login ให้เด้งไปมา
-                    // liff.login(); 
-
-                    // ✅ ให้ใช้ ID จำลองแทน (สำหรับทดสอบ)
-                    console.log("Testing Mode: Using Mock User ID");
-                    const mockUserId = "U1234567890..."; // <--- ใส่ User ID ที่มีอยู่จริงใน Database ของคุณตรงนี้
-                    fetchMyBookings(mockUserId);
-                    setProfile({ displayName: "Test User", pictureUrl: "" });
+                    liff.login();
                 }
             } catch (err) {
                 console.error("LIFF Error:", err);
-
-                // ✅ กรณี LIFF Error (เช่น ไม่ได้ใส่ ID) ก็ให้ใช้ Mock ID เหมือนกัน
-                const mockUserId = "U1234567890..."; // <--- ใส่ User ID เดียวกับข้างบน
-                fetchMyBookings(mockUserId);
+                setLoading(false);
+                // (Option) สำหรับทดสอบในคอม ถ้าไม่มี LIFF ให้ลอง Hardcode ID ตัวเองดู
+                // fetchMyBookings("U1234567890..."); 
             }
         };
         initLiff();
