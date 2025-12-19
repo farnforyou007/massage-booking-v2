@@ -106,6 +106,8 @@ export default function AdminPage() {
     const [serverStats, setServerStats] = useState({ total: 0, waiting: 0, checkedIn: 0, cancelled: 0 });
     const [chartRaw, setChartRaw] = useState([]); // เก็บข้อมูลดิบสำหรับกราฟ
     const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     useEffect(() => {
         const savedToken = localStorage.getItem("admin_token");
         if (savedToken) {
@@ -243,6 +245,7 @@ export default function AdminPage() {
         if (!authToken) return;
         if (!isSilent) setLoading(true);
 
+        if (isSilent) setIsRefreshing(true);
         try {
             let urlBookings = "";
 
@@ -267,6 +270,12 @@ export default function AdminPage() {
             } else {
                 urlBookings = `/api/admin/bookings?${baseParams}`;
             }
+
+            // ==========================================
+            // 🕒 พื้นที่ทดสอบ Delay (Test Zone)
+            // ถ้าอยากเห็นว่าวูบจริงมั้ย ให้เปิดบรรทัดล่างนี้ครับ (หน่วงเวลา 1 วินาที)
+            // await new Promise(resolve => setTimeout(resolve, 1000)); 
+            // ==========================================
 
             const resB = await fetch(urlBookings, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
             const resS = await adminGetSlotsSummary(date, authToken);
@@ -293,6 +302,7 @@ export default function AdminPage() {
             console.error("Reload Error:", err);
         } finally {
             if (!isSilent) setLoading(false);
+            setIsRefreshing(false);
         }
     }
 
@@ -325,8 +335,10 @@ export default function AdminPage() {
     useEffect(() => {
         if (authToken) {
             const delaySearch = setTimeout(() => {
-                reloadData();
-            }, 500); // หน่วงเวลา 0.5 วินาทีเพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
+                reloadData(true);
+                // setIsRefreshing(true);
+                // setTimeout(() => setIsRefreshing(false), 200);
+            }, 400); // หน่วงเวลา 0.5 วินาทีเพื่อไม่ให้ยิง API ถี่เกินไปขณะพิมพ์
             return () => clearTimeout(delaySearch);
         }
     }, [date, authToken, viewMode, currentPage, searchTerm, sortConfig]); // 🔥 เพิ่ม searchTerm ตรงนี้
@@ -338,7 +350,7 @@ export default function AdminPage() {
 
     useEffect(() => {
         if (authToken) {
-            reloadData();
+            // reloadData();
             loadDates();
 
         }
@@ -1618,177 +1630,685 @@ export default function AdminPage() {
                         </form>
                     </div>
                 ) : activeTab === "dashboard" ? (
-                    <div className="w-full max-w-7xl space-y-6 animate-fade-in-up">
+                    // <div className="w-full max-w-7xl space-y-6 animate-fade-in-up">
+                    // {/* // ✅ ของใหม่: เพิ่ม transition และเงื่อนไข isRefreshing ตรงนี้ทีเดียว */}
+                    // {/* <div className={`w-full max-w-7xl space-y-6 animate-fade-in-up transition-opacity duration-300 ${isRefreshing ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}> */}
+                    //     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                    //         <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+                    //             <FiCalendar className="text-gray-400" />
+                    //             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="text-gray-900 bg-transparent border-none outline-none text-sm font-medium" />
+                    //         </div>
+                    //         <button onClick={reloadData} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-70">
+                    //             <FiRefreshCw className={loading ? "animate-spin" : ""} /> {loading ? "กำลังโหลด..." : "อัปเดตข้อมูล"}
+                    //         </button>
+                    //     </div>
+
+                    //     {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4"> */}
+                    //     {loading ? (
+                    //         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                    //             {[...Array(4)].map((_, i) => (
+                    //                 <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center h-[88px]">
+                    //                     <div className="space-y-2">
+                    //                         <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                    //                         <div className="h-6 w-10 bg-gray-300 rounded"></div>
+                    //                     </div>
+                    //                     <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                    //                 </div>
+                    //             ))}
+                    //         </div>
+                    //     ) : (
+                    //         <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-opacity duration-300 ${isRefreshing ? 'opacity-50' : 'opacity-100'}`}>
+                    //             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    //                 <div>
+                    //                     <p className="text-xs text-gray-500">ทั้งหมด</p>
+                    //                     <p className="text-xl font-bold text-gray-900">{kpiStats.total}</p>
+                    //                 </div>
+                    //                 <FiUsers className="text-gray-300 text-2xl" />
+                    //             </div>
+                    //             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    //                 <div>
+                    //                     <p className="text-xs text-gray-500">รอรับบริการ</p>
+                    //                     <p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p>
+                    //                 </div>
+                    //                 <FiClock className="text-yellow-200 text-2xl" />
+                    //             </div>
+                    //             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    //                 <div>
+                    //                     <p className="text-xs text-gray-500">เช็คอิน</p>
+                    //                     <p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p>
+                    //                 </div>
+                    //                 <FiCheckCircle className="text-emerald-200 text-2xl" />
+                    //             </div>
+                    //             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    //                 <div>
+                    //                     <p className="text-xs text-gray-500">ยกเลิก</p>
+                    //                     <p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p>
+                    //                 </div>
+                    //                 <FiXCircle className="text-rose-200 text-2xl" />
+                    //             </div>
+                    //         </div>
+                    //     )}
+                    //     {/* <div className="grid grid-cols-1 lg:grid-cols-12 gap-6"> */}
+                    //     <div className={`grid grid-cols-1 lg:grid-cols-12 gap-6 transition-opacity duration-300 ${isRefreshing ? 'opacity-50' : 'opacity-100'}`}>
+                    //         <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    //             {/* <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                    //                 <FiBarChart2 /> สถิติการจองวันนี้
+                    //             </h3> */}
+                    //             <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                    //                 <FiBarChart2 />
+                    //                 {/* 🔥 แก้ไขหัวข้อให้ตรงกับโหมด */}
+                    //                 {viewMode === 'daily' && 'สถิติการจองรายชั่วโมง (วันนี้)'}
+                    //                 {viewMode === 'monthly' && 'สถิติการจองรายวัน (เดือนนี้)'}
+                    //                 {viewMode === 'yearly' && 'สถิติการจองรายเดือน (ปีนี้)'}
+                    //                 {viewMode === 'all' && 'แนวโน้มการจองทั้งหมด (ภาพรวม)'}
+                    //             </h3>
+
+                    //             <div className="h-[300px] md:h-[250px] w-full"> {/* 1. กรอบแม่ กำหนดความสูง และกว้างเต็ม */}
+                    //                 {chartData.length > 0 ? (
+                    //                     /* กรณีมีข้อมูล: แสดงกราฟ */
+                    //                     <ResponsiveContainer width="100%" height="100%">
+                    //                         {(() => {
+                    //                             const dynamicBarSize = viewMode === 'daily' ? (typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 45) : 15;
+                    //                             return (
+                    //                                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    //                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    //                                     <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
+                    //                                     <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
+                    //                                     <Tooltip
+                    //                                         cursor={{ fill: '#f8fafc' }}
+                    //                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    //                                     />
+                    //                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                    //                                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+
+                    //                                     <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                    //                                     <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                    //                                     <Bar dataKey="CANCELLED" name="ยกเลิก" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                    //                                 </BarChart>
+                    //                             );
+                    //                         })()}
+                    //                     </ResponsiveContainer>
+                    //                 ) : (
+                    //                     /* กรณีไม่มีข้อมูล: แสดงกล่องข้อความจัดกึ่งกลาง */
+                    //                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                    //                         <FiBarChart2 className="text-4xl mb-2 opacity-20" />
+                    //                         <p className="text-sm font-medium">ไม่พบข้อมูลสถิติในช่วงเวลาที่เลือก</p>
+                    //                         <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+                    //                     </div>
+                    //                 )}
+                    //             </div>
+                    //         </div>
+                    //         <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    //             <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                    //                 <FiPieChart /> สัดส่วนสถานะ
+                    //             </h3>
+                    //             <div className="h-[250px] w-full flex justify-center">
+                    //                 {pieData.length > 0 ? (
+                    //                     <ResponsiveContainer width="100%" height="100%">
+                    //                         <PieChart>
+                    //                             <Pie data={pieData} cx="50%" cy="50%"
+                    //                                 innerRadius={50} outerRadius={80}
+                    //                                 paddingAngle={5} dataKey="value">
+                    //                                 {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    //                             </Pie>
+                    //                             <Tooltip />
+                    //                             <Legend verticalAlign="bottom" height={36} />
+                    //                         </PieChart>
+                    //                     </ResponsiveContainer>
+                    //                 ) : (
+                    //                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                    //                         <FiPieChart className="text-4xl mb-2 opacity-20" />
+                    //                         <p className="text-sm font-medium">ไม่มีข้อมูลสัดส่วน</p>
+                    //                         <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+
+                    //                     </div>
+                    //                 )}
+                    //             </div>
+                    //         </div>
+                    //     </div>
+
+                    //     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    //         <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+                    //             <div className="flex bg-gray-100 p-1 rounded-xl w-fit mt-2 ml-4 -mb-2 border border-gray-200">
+                    //                 <button
+                    //                     onClick={() => { setViewMode("daily"); setCurrentPage(1); setSearchTerm(""); }}
+                    //                     className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                    //                 >
+                    //                     รายวัน
+                    //                 </button>
+                    //                 <button
+                    //                     onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm(""); }}
+                    //                     className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                    //                 >
+                    //                     รายเดือน
+                    //                 </button>
+                    //                 <button
+                    //                     onClick={() => { setViewMode("yearly"); setCurrentPage(1); setSearchTerm(""); }}
+                    //                     className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'yearly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                    //                 >
+                    //                     รายปี
+                    //                 </button>
+                    //                 <button
+                    //                     onClick={() => { setViewMode("all"); setCurrentPage(1); setSearchTerm(""); }}
+                    //                     className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
+                    //                 >
+                    //                     ทั้งหมด
+                    //                 </button>
+                    //             </div>
+                    //             <div className="p-4 border-b border-gray-100 flex gap-3 bg-gray-50/50">
+                    //                 <div className="flex flex-wrap md:flex-nowrap gap-3 flex-1">
+                    //                     {/* 1. ช่องค้นหา - ปรับขนาดใหญ่ขึ้น */}
+                    //                     <div className="relative flex-1 group">
+                    //                         <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                    //                             <FiSearch className="text-gray-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+                    //                         </div>
+                    //                         <input
+                    //                             type="text"
+                    //                             placeholder="ค้นหาชื่อ, เบอร์โทร หรือรหัสจอง..."
+                    //                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+                    //                             value={searchTerm}
+                    //                             onChange={e => setSearchTerm(e.target.value)}
+                    //                         />
+                    //                     </div>
+
+                    //                     {/* 2. Dropdown เลือกสถานะ - ปรับขนาดใหญ่ขึ้นให้เท่ากับ Input */}
+                    //                     <div className="relative w-full md:w-[130px] group">
+                    //                         <select
+                    //                             className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center"
+                    //                             value={filterStatus}
+                    //                             onChange={e => setFilterStatus(e.target.value)}
+                    //                         >
+                    //                             <option value="ALL">ทั้งหมด</option>
+                    //                             <option value="BOOKED">รอรับบริการ</option>
+                    //                             <option value="CHECKED_IN">เช็คอินแล้ว</option>
+                    //                             <option value="CANCELLED">ยกเลิกแล้ว</option>
+                    //                         </select>
+                    //                         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
+                    //                             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    //                         </div>
+                    //                     </div>
+                    //                 </div>
+
+                    //                 <div className="flex gap-2">
+                    //                     <button
+                    //                         onClick={handleExportExcel}
+                    //                         className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"
+                    //                     >
+                    //                         <FiFileText className="text-emerald-500 text-sm" /> Export Excel
+                    //                         {/* <FiFileText className="text-emerald-600" />
+                    //                         <span>Export Excel</span> */}
+                    //                     </button>
+                    //                 </div>
+                    //             </div>
+
+                    //             {/* <div className="flex-1 overflow-auto"> */}
+                    //             <div className={`flex-1 overflow-auto transition-opacity duration-300  ${isRefreshing ? 'opacity-50' : 'opacity-100'}`}>
+
+                    //                 <table className="w-full text-left">
+                    //                     {/* <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
+                    //                         <tr>
+                    //                             <th className="px-4 py-3 text-center w-16">ลำดับ</th>
+                    //                             {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all')
+                    //                                 && <th className="px-4 py-3">วันที่จอง</th>}
+                    //                             <th className="px-4 py-3">เวลา</th>
+                    //                             <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
+                    //                             <th className="px-4 py-3">เบอร์โทร</th>
+                    //                             <th className="px-4 py-3">สถานะ</th>
+                    //                             <th className="px-4 py-3 text-right">จัดการ</th>
+                    //                         </tr>
+                    //                     </thead> */}
+
+                    //                     <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
+                    //                         <tr>
+                    //                             <th className="px-4 py-3 text-center w-16">ลำดับ</th>
+
+                    //                             {/* วันที่จอง */}
+                    //                             {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
+                    //                                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('date')}>
+                    //                                     <div className="flex items-center">วันที่จอง {getSortIcon('date')}</div>
+                    //                                 </th>
+                    //                             )}
+
+                    //                             {/* เวลา */}
+                    //                             <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('slot')}>
+                    //                                 <div className="flex items-center">เวลา {getSortIcon('slot')}</div>
+                    //                             </th>
+
+                    //                             {/* ชื่อ */}
+                    //                             <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('name')}>
+                    //                                 <div className="flex items-center">ชื่อ-สกุล / รหัส {getSortIcon('name')}</div>
+                    //                             </th>
+
+                    //                             {/* เบอร์โทร */}
+                    //                             <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('phone')}>
+                    //                                 <div className="flex items-center">เบอร์โทร {getSortIcon('phone')}</div>
+                    //                             </th>
+
+                    //                             {/* สถานะ */}
+                    //                             <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('status')}>
+                    //                                 <div className="flex items-center">สถานะ {getSortIcon('status')}</div>
+                    //                             </th>
+
+                    //                             <th className="px-4 py-3 text-right">จัดการ</th>
+                    //                         </tr>
+                    //                     </thead>
+                    //                     <tbody className="text-sm divide-y divide-gray-50">
+                    //                         {filteredBookings.length > 0 ? (
+                    //                             // {bookings.length > 0 ? (
+                    //                             // filteredBookings.map((b, i) => (
+                    //                             filteredBookings.map((b, i) => {
+                    //                                 // bookings.map((b, i) => {
+                    //                                 const rowNumber = ((currentPage - 1) * 50) + (i + 1);
+
+                    //                                 return (
+                    //                                     <tr key={i} className="hover:bg-emerald-50/30">
+                    //                                         <td className="px-4 py-3 text-center font-mono text-gray-400 text-xs">
+                    //                                             {rowNumber}
+                    //                                         </td>
+                    //                                         {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
+                    //                                             <td className="px-4 py-3 font-medium text-gray-600">
+                    //                                                 {formatThaiDateAdmin(b.date)}
+                    //                                             </td>
+                    //                                         )}
+                    //                                         <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
+
+                    //                                         <td className="px-4 py-3">
+                    //                                             <div className="flex items-center gap-1.5 group/name">
+                    //                                                 <span className="font-bold text-gray-800">{b.name}</span>
+                    //                                                 <button
+                    //                                                     onClick={() => handleCopy(b.name, "ชื่อ")}
+                    //                                                     className="text-gray-300 hover:text-emerald-600 transition-colors"
+                    //                                                     title="คัดลอกชื่อ"
+                    //                                                 >
+                    //                                                     <FiCopy size={13} />
+                    //                                                 </button>
+
+                    //                                             </div>
+                    //                                             <div className="flex items-center gap-1.5 mt-0.5 group/code">
+                    //                                                 <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
+                    //                                                 <button
+                    //                                                     onClick={() => handleCopy(b.code, "รหัสจอง")}
+                    //                                                     className="text-gray-300 hover:text-emerald-500 transition-colors"
+                    //                                                     title="คัดลอกรหัส"
+                    //                                                 >
+                    //                                                     <FiCopy size={10} />
+                    //                                                 </button>
+
+                    //                                             </div>
+                    //                                             <div className="text-[9px] text-emerald-500 mt-1 italic">
+                    //                                                 จองเมื่อ: {new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+                    //                                             </div>
+                    //                                         </td>
+
+                    //                                         <td className="px-4 py-3">
+                    //                                             <div className="flex items-center gap-1.5 group/phone">
+                    //                                                 <span className="font-mono text-gray-600 text-xs">{b.phone}</span>
+                    //                                                 <button
+                    //                                                     onClick={() => handleCopy(b.phone, "เบอร์โทร")}
+                    //                                                     className="text-gray-300 hover:text-blue-500 transition-colors"
+                    //                                                     title="คัดลอกเบอร์โทร"
+                    //                                                 >
+                    //                                                     <FiCopy size={12} />
+                    //                                                 </button>
+                    //                                             </div>
+                    //                                         </td>
+                    //                                         <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
+                    //                                         <td className="px-4 py-3 text-right">
+                    //                                             {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
+                    //                                         </td>
+                    //                                     </tr>
+                    //                                     // ))
+                    //                                 );
+                    //                             })
+                    //                         ) : (
+
+                    //                             <tr className="h-full">
+                    //                                 <td colSpan="6" className="p-0 align-middle">
+                    //                                     {/* <div className="flex flex-col items-center justify-center h-[450px] text-gray-400 gap-3"> */}
+                    //                                     <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3 min-h-[445px]">
+                    //                                         <div className="p-4 bg-gray-50 rounded-full">
+                    //                                             <FiSearch size={48} className="opacity-20" />
+                    //                                         </div>
+                    //                                         <div className="text-center">
+                    //                                             <p className="text-base font-semibold text-gray-500">ไม่พบข้อมูลที่ค้นหา</p>
+                    //                                             <p className="text-xs opacity-60">ตรวจสอบคำสะกด หรือเปลี่ยนตัวกรองสถานะใหม่</p>
+                    //                                         </div>
+                    //                                         {/* ปุ่มสำหรับล้างการค้นหา (Option เสริม) */}
+                    //                                         <button
+                    //                                             onClick={() => { setSearchTerm(""); setFilterStatus("ALL"); }}
+                    //                                             className="mt-2 text-xs text-emerald-600 hover:underline font-medium"
+                    //                                         >
+                    //                                             ล้างตัวกรองทั้งหมด
+                    //                                         </button>
+                    //                                     </div>
+                    //                                 </td>
+                    //                             </tr>
+                    //                         )}
+                    //                     </tbody>
+                    //                 </table>
+                    //             </div>
+                    //             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between mt-auto ">
+                    //                 <div className="text-[10px] text-gray-500 font-medium">
+                    //                     แสดงหน้า {currentPage} (ทั้งหมด {totalRecords} รายการ)
+                    //                 </div>
+                    //                 <div className="flex gap-2">
+                    //                     <button
+                    //                         // disabled={currentPage === 1 || loading}
+                    //                         disabled={currentPage * 50 >= totalRecords || loading}
+                    //                         onClick={() => setCurrentPage(prev => prev + 1)}
+                    //                         className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    //                     >
+                    //                         ก่อนหน้า
+                    //                     </button>
+                    //                     <button
+                    //                         disabled={bookings.length < 50 || loading}
+                    //                         onClick={() => setCurrentPage(prev => prev + 1)}
+                    //                         className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    //                     >
+                    //                         ถัดไป
+                    //                     </button>
+                    //                 </div>
+                    //             </div>
+                    //         </div>
+
+                    //         <div className="lg:col-span-4 space-y-6">
+                    //             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    //                 <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> จัดการวันเปิดให้บริการ</h3>
+                    //                 <div className="flex gap-2 mb-4">
+                    //                     {/* 1. กล่องใส่วันที่ */}
+                    //                     <div className="relative flex-1 border border-gray-200 rounded-lg bg-white focus-within:ring-1 focus-within:ring-emerald-500 overflow-hidden">
+
+                    //                         <input
+                    //                             type="date"
+                    //                             value={newDate}
+                    //                             onChange={e => setNewDate(e.target.value)}
+                    //                             onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    //                             onFocus={() => setIsFocused(true)}
+                    //                             onBlur={() => setIsFocused(false)}
+                    //                             style={{ colorScheme: 'light' }}
+                    //                             className={`
+                    //                             text-gray-900 w-full h-full px-2 py-1.5 text-xs outline-none bg-transparent border-none
+                    //                             relative z-10 
+                    //                             ${!newDate ? 'text-transparent' : 'text-gray-900'}
+                    //                         `}
+                    //                         />
+
+                    //                         {/* 2. Placeholder: วางซ้อนข้างหลัง */}
+                    //                         {(!newDate && !isFocused) && (
+                    //                             <span className="absolute left-2 top-1.5 text-xs text-gray-400 pointer-events-none z-0">
+                    //                                 --เลือกวันที่เปิดให้บริการ--
+                    //                             </span>
+                    //                         )}
+                    //                     </div>
+                    //                     <button
+                    //                         onClick={handleAddDate}
+                    //                         disabled={!newDate || addingDate}
+                    //                         className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
+                    //                     >
+                    //                         {addingDate ? <FiLoader className="animate-spin" /> : <FiPlus />} {addingDate ? "..." : "เพิ่มวันที่"}
+                    //                     </button>
+                    //                 </div>
+                    //                 {/* <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1" > */}
+                    //                 <div className="grid grid-cols-2 gap-2 max-h-[155px] overflow-y-auto pr-1 ">
+                    //                     {manageDates.length > 0 ? manageDates.map((item) => (
+                    //                         <div
+                    //                             key={item.date}
+                    //                             className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all h-[45px] ${item.status === "OPEN"
+                    //                                 ? "bg-emerald-50 border-emerald-200"
+                    //                                 : "bg-gray-50 border-gray-200 opacity-75"
+                    //                                 }`}
+                    //                         >
+                    //                             <div className="flex items-center gap-3">
+                    //                                 <button
+                    //                                     onClick={() => handleToggleStatus(item)}
+                    //                                     className={`p-1.5 rounded-full transition-colors ${item.status === "OPEN"
+                    //                                         ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
+                    //                                         : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                    //                                         }`}
+                    //                                     title={item.status === "OPEN" ? "คลิกเพื่อปิด" : "คลิกเพื่อเปิด"}
+                    //                                 >
+                    //                                     {item.status === "OPEN" ? <FiUnlock size={14} /> : <FiLock size={14} />}
+                    //                                 </button>
+                    //                                 <span className={`text-sm font-medium ${item.status === "OPEN" ? "text-emerald-900" : "text-gray-500 line-through decoration-gray-400"}`}>
+                    //                                     {formatThaiDateAdmin(item.date)}
+                    //                                 </span>
+                    //                             </div>
+                    //                             <button onClick={() => handleDeleteDate(item.date)} className="text-gray-400 hover:text-rose-500 p-1 rounded-md hover:bg-rose-50 transition-colors"><FiTrash2 size={16} /></button>
+                    //                         </div>
+                    //                     )) : (
+                    //                         <div className="col-span-2 text-center py-6 border-2 border-dashed border-gray-100 rounded-xl"><p className="text-xs text-gray-400">ยังไม่มีวันเปิดจอง</p></div>
+                    //                     )}
+                    //                 </div>
+                    //             </div>
+
+
+
+                    //             {/* ส่วนแสดงผลจัดการคิว */}
+                    //             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
+                    //                 <div className="flex justify-between items-center mb-4">
+                    //                     <h3 className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                    //                         <FiLayers className="text-blue-600" /> จัดการช่วงเวลา / คิว ({Array.isArray(slots) ? slots.length : 0})
+                    //                     </h3>
+                    //                     {/* ปุ่มเพิ่มรอบเวลาใหม่ */}
+                    //                     {/* <button
+                    //                         onClick={handleAddSlot}
+                    //                         className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded hover:bg-emerald-100 flex items-center gap-1 transition-colors"
+                    //                     >
+                    //                         <FiPlus /> เพิ่มรอบ
+                    //                     </button> */}
+                    //                     <button
+                    //                         onClick={handleAddSlot}
+                    //                         className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-sm"
+                    //                     >
+                    //                         <FiPlus /> เพิ่ม
+                    //                     </button>
+                    //                 </div>
+
+                    //                 <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                    //                     {Array.isArray(slots) && slots.length > 0 ? (
+                    //                         slots.map((s) => (
+                    //                             <div key={s.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-2 group hover:border-emerald-200 transition-colors">
+                    //                                 <div className="flex justify-between items-center">
+                    //                                     <span className="font-bold text-sm text-gray-700">{s.label}</span>
+                    //                                     <div className="flex gap-1">
+                    //                                         {/* ปุ่มแก้ไข */}
+                    //                                         <button
+                    //                                             onClick={() => handleEditSlotFull(s)}
+                    //                                             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                    //                                             title="แก้ไข"
+                    //                                         >
+                    //                                             <FiEdit2 size={12} />
+                    //                                         </button>
+                    //                                         {/* ปุ่มลบ */}
+                    //                                         <button
+                    //                                             onClick={() => handleDeleteSlot(s)}
+                    //                                             className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                    //                                             title="ลบ"
+                    //                                         >
+                    //                                             <FiTrash2 size={12} />
+                    //                                         </button>
+                    //                                     </div>
+                    //                                 </div>
+                    //                                 {/* Progress Bar */}
+                    //                                 <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    //                                     {/* <div
+                    //                                         className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                    //                                         style={{ width: `${(s.booked / s.capacity) * 100}%` }}
+                    //                                     ></div> */}
+                    //                                     <div
+                    //                                         className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0
+                    //                                             ? 'bg-rose-500' // สีแดงเมื่อเต็ม
+                    //                                             : (s.booked / s.capacity) >= 0.6
+                    //                                                 ? 'bg-orange-500' // 🔥 สีส้มเมื่อจองเกิน 80%
+                    //                                                 : 'bg-emerald-500' // สีเขียวปกติ
+                    //                                             }`}
+                    //                                         style={{ width: `${(s.booked / s.capacity) * 100}%` }}
+                    //                                     ></div>
+                    //                                 </div>
+                    //                                 <div className="flex justify-between text-[11px] text-gray-500">
+                    //                                     <span>จอง {s.booked}/{s.capacity}</span>
+                    //                                     <span>{s.remaining === 0 ? 'เต็ม' : 'ว่าง ' + s.remaining}</span>
+                    //                                 </div>
+                    //                             </div>
+                    //                         ))
+                    //                     ) : (
+                    //                         <div className="text-center text-gray-400 text-xs mt-10">
+                    //                             <p>ไม่พบข้อมูลรอบเวลา</p>
+                    //                             <button onClick={handleAddSlot} className="mt-2 text-emerald-600 underline hover:text-emerald-700">
+                    //                                 + เพิ่มรอบแรก
+                    //                             </button>
+                    //                         </div>
+                    //                     )}
+                    //                 </div>
+                    //             </div>
+                    //         </div>
+                    //     </div>
+                    // </div>
+
+                    // ver2
+                    <div className={`w-full max-w-7xl space-y-6 animate-fade-in-up transition-opacity duration-300 ${isRefreshing ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+
+                        {/* 1. ส่วนหัว (เลือกวันที่ + ปุ่มรีเฟรช) */}
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
                                 <FiCalendar className="text-gray-400" />
                                 <input type="date" value={date} onChange={e => setDate(e.target.value)} className="text-gray-900 bg-transparent border-none outline-none text-sm font-medium" />
                             </div>
-                            <button onClick={reloadData} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-70">
+                            <button onClick={() => reloadData(false)} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-70">
                                 <FiRefreshCw className={loading ? "animate-spin" : ""} /> {loading ? "กำลังโหลด..." : "อัปเดตข้อมูล"}
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <p className="text-xs text-gray-500">ทั้งหมด</p>
-                                    <p className="text-xl font-bold text-gray-900">{kpiStats.total}</p>
-                                </div>
-                                <FiUsers className="text-gray-300 text-2xl" />
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <p className="text-xs text-gray-500">รอรับบริการ</p>
-                                    <p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p>
-                                </div>
-                                <FiClock className="text-yellow-200 text-2xl" />
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <p className="text-xs text-gray-500">เช็คอิน</p>
-                                    <p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p>
-                                </div>
-                                <FiCheckCircle className="text-emerald-200 text-2xl" />
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <p className="text-xs text-gray-500">ยกเลิก</p>
-                                    <p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p>
-                                </div>
-                                <FiXCircle className="text-rose-200 text-2xl" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                            <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                {/* <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                                    <FiBarChart2 /> สถิติการจองวันนี้
-                                </h3> */}
-                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                                    <FiBarChart2 />
-                                    {/* 🔥 แก้ไขหัวข้อให้ตรงกับโหมด */}
-                                    {viewMode === 'daily' && 'สถิติการจองรายชั่วโมง (วันนี้)'}
-                                    {viewMode === 'monthly' && 'สถิติการจองรายวัน (เดือนนี้)'}
-                                    {viewMode === 'yearly' && 'สถิติการจองรายเดือน (ปีนี้)'}
-                                    {viewMode === 'all' && 'แนวโน้มการจองทั้งหมด (ภาพรวม)'}
-                                </h3>
-
-                                <div className="h-[300px] md:h-[250px] w-full"> {/* 1. กรอบแม่ กำหนดความสูง และกว้างเต็ม */}
-                                    {chartData.length > 0 ? (
-                                        /* กรณีมีข้อมูล: แสดงกราฟ */
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            {(() => {
-                                                const dynamicBarSize = viewMode === 'daily' ? (typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 45) : 15;
-                                                return (
-                                                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                                        <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
-                                                        <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
-                                                        <Tooltip
-                                                            cursor={{ fill: '#f8fafc' }}
-                                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                                        />
-                                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
-
-                                                        <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
-                                                        <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
-                                                        <Bar dataKey="CANCELLED" name="ยกเลิก" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
-                                                    </BarChart>
-                                                );
-                                            })()}
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        /* กรณีไม่มีข้อมูล: แสดงกล่องข้อความจัดกึ่งกลาง */
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
-                                            <FiBarChart2 className="text-4xl mb-2 opacity-20" />
-                                            <p className="text-sm font-medium">ไม่พบข้อมูลสถิติในช่วงเวลาที่เลือก</p>
-                                            <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+                        {/* 2. KPI Cards (มี Skeleton) */}
+                        {loading ? (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center h-[88px]">
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                                            <div className="h-6 w-10 bg-gray-300 rounded"></div>
                                         </div>
-                                    )}
+                                        <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                    <div><p className="text-xs text-gray-500">ทั้งหมด</p><p className="text-xl font-bold text-gray-900">{kpiStats.total}</p></div>
+                                    <FiUsers className="text-gray-300 text-2xl" />
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                    <div><p className="text-xs text-gray-500">รอรับบริการ</p><p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p></div>
+                                    <FiClock className="text-yellow-200 text-2xl" />
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                    <div><p className="text-xs text-gray-500">เช็คอิน</p><p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p></div>
+                                    <FiCheckCircle className="text-emerald-200 text-2xl" />
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                    <div><p className="text-xs text-gray-500">ยกเลิก</p><p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p></div>
+                                    <FiXCircle className="text-rose-200 text-2xl" />
                                 </div>
                             </div>
-                            <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                                    <FiPieChart /> สัดส่วนสถานะ
-                                </h3>
-                                <div className="h-[250px] w-full flex justify-center">
-                                    {pieData.length > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={pieData} cx="50%" cy="50%"
-                                                    innerRadius={50} outerRadius={80}
-                                                    paddingAngle={5} dataKey="value">
-                                                    {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                                                </Pie>
-                                                <Tooltip />
-                                                <Legend verticalAlign="bottom" height={36} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
-                                            <FiPieChart className="text-4xl mb-2 opacity-20" />
-                                            <p className="text-sm font-medium">ไม่มีข้อมูลสัดส่วน</p>
-                                            <p className="text-xs mt-1">กรุณาเลือกวันที่หรือโหมดการดูอื่น</p>
+                        )}
 
-                                        </div>
-                                    )}
+                        {/* 3. กราฟ (มี Skeleton) */}
+                        {loading ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
+                                <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[350px]">
+                                    <div className="h-5 w-48 bg-gray-200 rounded mb-6"></div>
+                                    <div className="h-[250px] bg-gray-100 rounded-xl w-full"></div>
+                                </div>
+                                <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[350px]">
+                                    <div className="h-5 w-32 bg-gray-200 rounded mb-6"></div>
+                                    <div className="h-[200px] w-[200px] bg-gray-100 rounded-full mx-auto mt-6"></div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                    <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                        <FiBarChart2 />
+                                        {viewMode === 'daily' && 'สถิติการจองรายชั่วโมง (วันนี้)'}
+                                        {viewMode === 'monthly' && 'สถิติการจองรายวัน (เดือนนี้)'}
+                                        {viewMode === 'yearly' && 'สถิติการจองรายเดือน (ปีนี้)'}
+                                        {viewMode === 'all' && 'แนวโน้มการจองทั้งหมด (ภาพรวม)'}
+                                    </h3>
+                                    <div className="h-[300px] md:h-[250px] w-full">
+                                        {chartData.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                {(() => {
+                                                    const dynamicBarSize = viewMode === 'daily' ? (typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 45) : 15;
+                                                    return (
+                                                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                                            <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
+                                                            <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
+                                                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                                                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                                                            <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                            <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                            <Bar dataKey="CANCELLED" name="ยกเลิก" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                        </BarChart>
+                                                    );
+                                                })()}
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                                                <FiBarChart2 className="text-4xl mb-2 opacity-20" />
+                                                <p className="text-sm font-medium">ไม่พบข้อมูลสถิติในช่วงเวลาที่เลือก</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                    <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
+                                        <FiPieChart /> สัดส่วนสถานะ
+                                    </h3>
+                                    <div className="h-[250px] w-full flex justify-center">
+                                        {pieData.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                                                        {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                                    </Pie>
+                                                    <Tooltip />
+                                                    <Legend verticalAlign="bottom" height={36} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-100">
+                                                <FiPieChart className="text-4xl mb-2 opacity-20" />
+                                                <p className="text-sm font-medium">ไม่มีข้อมูลสัดส่วน</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
+                        {/* 4. ตารางข้อมูล + ปุ่มจัดการ */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-8 flex flex-col h-[653px] bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+                                {/* Header ของตาราง (ปุ่มเลือกโหมด + ช่องค้นหา) */}
                                 <div className="flex bg-gray-100 p-1 rounded-xl w-fit mt-2 ml-4 -mb-2 border border-gray-200">
-                                    <button
-                                        onClick={() => { setViewMode("daily"); setCurrentPage(1); setSearchTerm(""); }}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        รายวัน
-                                    </button>
-                                    <button
-                                        onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm(""); }}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        รายเดือน
-                                    </button>
-                                    <button
-                                        onClick={() => { setViewMode("yearly"); setCurrentPage(1); setSearchTerm(""); }}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'yearly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        รายปี
-                                    </button>
-                                    <button
-                                        onClick={() => { setViewMode("all"); setCurrentPage(1); setSearchTerm(""); }}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}
-                                    >
-                                        ทั้งหมด
-                                    </button>
+                                    <button onClick={() => { setViewMode("daily"); setCurrentPage(1); setSearchTerm(""); }} className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'daily' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>รายวัน</button>
+                                    <button onClick={() => { setViewMode("monthly"); setCurrentPage(1); setSearchTerm(""); }} className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'monthly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>รายเดือน</button>
+                                    <button onClick={() => { setViewMode("yearly"); setCurrentPage(1); setSearchTerm(""); }} className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'yearly' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>รายปี</button>
+                                    <button onClick={() => { setViewMode("all"); setCurrentPage(1); setSearchTerm(""); }} className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>ทั้งหมด</button>
                                 </div>
                                 <div className="p-4 border-b border-gray-100 flex gap-3 bg-gray-50/50">
                                     <div className="flex flex-wrap md:flex-nowrap gap-3 flex-1">
-                                        {/* 1. ช่องค้นหา - ปรับขนาดใหญ่ขึ้น */}
                                         <div className="relative flex-1 group">
                                             <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
                                                 <FiSearch className="text-gray-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
                                             </div>
-                                            <input
-                                                type="text"
-                                                placeholder="ค้นหาชื่อ, เบอร์โทร หรือรหัสจอง..."
-                                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
-                                                value={searchTerm}
-                                                onChange={e => setSearchTerm(e.target.value)}
-                                            />
+                                            <input type="text" placeholder="ค้นหาชื่อ, เบอร์โทร หรือรหัสจอง..." className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                                         </div>
-
-                                        {/* 2. Dropdown เลือกสถานะ - ปรับขนาดใหญ่ขึ้นให้เท่ากับ Input */}
                                         <div className="relative w-full md:w-[130px] group">
-                                            <select
-                                                className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center"
-                                                value={filterStatus}
-                                                onChange={e => setFilterStatus(e.target.value)}
-                                            >
+                                            <select className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                                                 <option value="ALL">ทั้งหมด</option>
                                                 <option value="BOOKED">รอรับบริการ</option>
                                                 <option value="CHECKED_IN">เช็คอินแล้ว</option>
@@ -1799,125 +2319,77 @@ export default function AdminPage() {
                                             </div>
                                         </div>
                                     </div>
-
                                     <div className="flex gap-2">
-                                        <button
-                                            onClick={handleExportExcel}
-                                            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"
-                                        >
+                                        <button onClick={handleExportExcel} className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm">
                                             <FiFileText className="text-emerald-500 text-sm" /> Export Excel
-                                            {/* <FiFileText className="text-emerald-600" />
-                                            <span>Export Excel</span> */}
                                         </button>
                                     </div>
                                 </div>
+
+                                {/* ส่วนเนื้อหาตาราง */}
                                 <div className="flex-1 overflow-auto">
                                     <table className="w-full text-left">
-                                        {/* <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
-                                            <tr>
-                                                <th className="px-4 py-3 text-center w-16">ลำดับ</th>
-                                                {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all')
-                                                    && <th className="px-4 py-3">วันที่จอง</th>}
-                                                <th className="px-4 py-3">เวลา</th>
-                                                <th className="px-4 py-3">ชื่อ-สกุล / รหัสการจอง</th>
-                                                <th className="px-4 py-3">เบอร์โทร</th>
-                                                <th className="px-4 py-3">สถานะ</th>
-                                                <th className="px-4 py-3 text-right">จัดการ</th>
-                                            </tr>
-                                        </thead> */}
-
                                         <thead className="bg-gray-50 sticky top-0 text-xs font-bold text-gray-500 uppercase">
                                             <tr>
                                                 <th className="px-4 py-3 text-center w-16">ลำดับ</th>
-
-                                                {/* วันที่จอง */}
                                                 {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
                                                     <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('date')}>
                                                         <div className="flex items-center">วันที่จอง {getSortIcon('date')}</div>
                                                     </th>
                                                 )}
-
-                                                {/* เวลา */}
                                                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('slot')}>
                                                     <div className="flex items-center">เวลา {getSortIcon('slot')}</div>
                                                 </th>
-
-                                                {/* ชื่อ */}
                                                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('name')}>
                                                     <div className="flex items-center">ชื่อ-สกุล / รหัส {getSortIcon('name')}</div>
                                                 </th>
-
-                                                {/* เบอร์โทร */}
                                                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('phone')}>
                                                     <div className="flex items-center">เบอร์โทร {getSortIcon('phone')}</div>
                                                 </th>
-
-                                                {/* สถานะ */}
                                                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('status')}>
                                                     <div className="flex items-center">สถานะ {getSortIcon('status')}</div>
                                                 </th>
-
                                                 <th className="px-4 py-3 text-right">จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm divide-y divide-gray-50">
-                                            {filteredBookings.length > 0 ? (
-                                                // {bookings.length > 0 ? (
-                                                // filteredBookings.map((b, i) => (
+                                            {loading && bookings.length === 0 ? (
+                                                [...Array(10)].map((_, i) => (
+                                                    <tr key={i} className="animate-pulse">
+                                                        <td className="px-4 py-4 text-center"><div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div></td>
+                                                        <td className="px-4 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                                                        <td className="px-4 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                                                        <td className="px-4 py-4"><div className="flex flex-col gap-2"><div className="h-4 bg-gray-200 rounded w-32"></div><div className="h-3 bg-gray-100 rounded w-20"></div></div></td>
+                                                        <td className="px-4 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                                                        <td className="px-4 py-4"><div className="h-6 bg-gray-200 rounded-full w-20"></div></td>
+                                                        <td className="px-4 py-4 text-right"><div className="flex justify-end gap-2"><div className="h-8 w-8 bg-gray-200 rounded-lg"></div><div className="h-8 w-8 bg-gray-200 rounded-lg"></div></div></td>
+                                                    </tr>
+                                                ))
+                                            ) : filteredBookings.length > 0 ? (
                                                 filteredBookings.map((b, i) => {
-                                                    // bookings.map((b, i) => {
                                                     const rowNumber = ((currentPage - 1) * 50) + (i + 1);
-
                                                     return (
-                                                        <tr key={i} className="hover:bg-emerald-50/30">
-                                                            <td className="px-4 py-3 text-center font-mono text-gray-400 text-xs">
-                                                                {rowNumber}
-                                                            </td>
+                                                        <tr key={i} className="hover:bg-emerald-50/30 transition-colors">
+                                                            <td className="px-4 py-3 text-center font-mono text-gray-400 text-xs">{rowNumber}</td>
                                                             {(viewMode === 'monthly' || viewMode === 'yearly' || viewMode === 'all') && (
-                                                                <td className="px-4 py-3 font-medium text-gray-600">
-                                                                    {formatThaiDateAdmin(b.date)}
-                                                                </td>
+                                                                <td className="px-4 py-3 font-medium text-gray-600">{formatThaiDateAdmin(b.date)}</td>
                                                             )}
                                                             <td className="px-4 py-3 font-medium text-emerald-700">{b.slot}</td>
-
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center gap-1.5 group/name">
                                                                     <span className="font-bold text-gray-800">{b.name}</span>
-                                                                    <button
-                                                                        onClick={() => handleCopy(b.name, "ชื่อ")}
-                                                                        className="text-gray-300 hover:text-emerald-600 transition-colors"
-                                                                        title="คัดลอกชื่อ"
-                                                                    >
-                                                                        <FiCopy size={13} />
-                                                                    </button>
-
+                                                                    <button onClick={() => handleCopy(b.name, "ชื่อ")} className="text-gray-300 hover:text-emerald-600 transition-colors"><FiCopy size={13} /></button>
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5 mt-0.5 group/code">
                                                                     <span className="text-[10px] text-gray-400 font-mono">#{b.code}</span>
-                                                                    <button
-                                                                        onClick={() => handleCopy(b.code, "รหัสจอง")}
-                                                                        className="text-gray-300 hover:text-emerald-500 transition-colors"
-                                                                        title="คัดลอกรหัส"
-                                                                    >
-                                                                        <FiCopy size={10} />
-                                                                    </button>
-
+                                                                    <button onClick={() => handleCopy(b.code, "รหัสจอง")} className="text-gray-300 hover:text-emerald-500 transition-colors"><FiCopy size={10} /></button>
                                                                 </div>
-                                                                <div className="text-[9px] text-emerald-500 mt-1 italic">
-                                                                    จองเมื่อ: {new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
-                                                                </div>
+                                                                <div className="text-[9px] text-emerald-500 mt-1 italic">{b.created_at ? `จองเมื่อ: ${new Date(b.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}` : ''}</div>
                                                             </td>
-
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center gap-1.5 group/phone">
                                                                     <span className="font-mono text-gray-600 text-xs">{b.phone}</span>
-                                                                    <button
-                                                                        onClick={() => handleCopy(b.phone, "เบอร์โทร")}
-                                                                        className="text-gray-300 hover:text-blue-500 transition-colors"
-                                                                        title="คัดลอกเบอร์โทร"
-                                                                    >
-                                                                        <FiCopy size={12} />
-                                                                    </button>
+                                                                    <button onClick={() => handleCopy(b.phone, "เบอร์โทร")} className="text-gray-300 hover:text-blue-500 transition-colors"><FiCopy size={12} /></button>
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
@@ -1925,29 +2397,15 @@ export default function AdminPage() {
                                                                 {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
                                                             </td>
                                                         </tr>
-                                                        // ))
                                                     );
                                                 })
                                             ) : (
-
                                                 <tr className="h-full">
-                                                    <td colSpan="6" className="p-0 align-middle">
-                                                        {/* <div className="flex flex-col items-center justify-center h-[450px] text-gray-400 gap-3"> */}
+                                                    <td colSpan="7" className="p-0 align-middle">
                                                         <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3 min-h-[445px]">
-                                                            <div className="p-4 bg-gray-50 rounded-full">
-                                                                <FiSearch size={48} className="opacity-20" />
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <p className="text-base font-semibold text-gray-500">ไม่พบข้อมูลที่ค้นหา</p>
-                                                                <p className="text-xs opacity-60">ตรวจสอบคำสะกด หรือเปลี่ยนตัวกรองสถานะใหม่</p>
-                                                            </div>
-                                                            {/* ปุ่มสำหรับล้างการค้นหา (Option เสริม) */}
-                                                            <button
-                                                                onClick={() => { setSearchTerm(""); setFilterStatus("ALL"); }}
-                                                                className="mt-2 text-xs text-emerald-600 hover:underline font-medium"
-                                                            >
-                                                                ล้างตัวกรองทั้งหมด
-                                                            </button>
+                                                            <div className="p-4 bg-gray-50 rounded-full"><FiSearch size={48} className="opacity-20" /></div>
+                                                            <div className="text-center"><p className="text-base font-semibold text-gray-500">ไม่พบข้อมูลที่ค้นหา</p><p className="text-xs opacity-60">ตรวจสอบคำสะกด หรือเปลี่ยนตัวกรองสถานะใหม่</p></div>
+                                                            <button onClick={() => { setSearchTerm(""); setFilterStatus("ALL"); }} className="mt-2 text-xs text-emerald-600 hover:underline font-medium">ล้างตัวกรองทั้งหมด</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1955,91 +2413,38 @@ export default function AdminPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between mt-auto ">
-                                    <div className="text-[10px] text-gray-500 font-medium">
-                                        แสดงหน้า {currentPage} (ทั้งหมด {totalRecords} รายการ)
-                                    </div>
+
+                                {/* Pagination */}
+                                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between mt-auto">
+                                    <div className="text-[10px] text-gray-500 font-medium">แสดงหน้า {currentPage} (ทั้งหมด {totalRecords} รายการ)</div>
                                     <div className="flex gap-2">
-                                        <button
-                                            // disabled={currentPage === 1 || loading}
-                                            disabled={currentPage * 50 >= totalRecords || loading}
-                                            onClick={() => setCurrentPage(prev => prev + 1)}
-                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
-                                        >
-                                            ก่อนหน้า
-                                        </button>
-                                        <button
-                                            disabled={bookings.length < 50 || loading}
-                                            onClick={() => setCurrentPage(prev => prev + 1)}
-                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors"
-                                        >
-                                            ถัดไป
-                                        </button>
+                                        <button disabled={currentPage * 50 >= totalRecords || loading} onClick={() => setCurrentPage(prev => prev + 1)} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors">ก่อนหน้า</button>
+                                        <button disabled={bookings.length < 50 || loading} onClick={() => setCurrentPage(prev => prev + 1)} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold disabled:opacity-50 hover:bg-gray-50 transition-colors">ถัดไป</button>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* 5. ส่วนจัดการวันที่และคิว (ด้านขวา) */}
                             <div className="lg:col-span-4 space-y-6">
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                                     <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2"><FiCalendar className="text-emerald-600" /> จัดการวันเปิดให้บริการ</h3>
                                     <div className="flex gap-2 mb-4">
-                                        {/* 1. กล่องใส่วันที่ */}
                                         <div className="relative flex-1 border border-gray-200 rounded-lg bg-white focus-within:ring-1 focus-within:ring-emerald-500 overflow-hidden">
-
-                                            <input
-                                                type="date"
-                                                value={newDate}
-                                                onChange={e => setNewDate(e.target.value)}
-                                                onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                                                onFocus={() => setIsFocused(true)}
-                                                onBlur={() => setIsFocused(false)}
-                                                style={{ colorScheme: 'light' }}
-                                                className={`
-                                                text-gray-900 w-full h-full px-2 py-1.5 text-xs outline-none bg-transparent border-none
-                                                relative z-10 
-                                                ${!newDate ? 'text-transparent' : 'text-gray-900'}
-                                            `}
-                                            />
-
-                                            {/* 2. Placeholder: วางซ้อนข้างหลัง */}
-                                            {(!newDate && !isFocused) && (
-                                                <span className="absolute left-2 top-1.5 text-xs text-gray-400 pointer-events-none z-0">
-                                                    --เลือกวันที่เปิดให้บริการ--
-                                                </span>
-                                            )}
+                                            <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} onClick={(e) => e.target.showPicker && e.target.showPicker()} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} style={{ colorScheme: 'light' }} className={`text-gray-900 w-full h-full px-2 py-1.5 text-xs outline-none bg-transparent border-none relative z-10 ${!newDate ? 'text-transparent' : 'text-gray-900'}`} />
+                                            {(!newDate && !isFocused) && <span className="absolute left-2 top-1.5 text-xs text-gray-400 pointer-events-none z-0">--เลือกวันที่เปิดให้บริการ--</span>}
                                         </div>
-                                        <button
-                                            onClick={handleAddDate}
-                                            disabled={!newDate || addingDate}
-                                            className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-                                        >
+                                        <button onClick={handleAddDate} disabled={!newDate || addingDate} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2">
                                             {addingDate ? <FiLoader className="animate-spin" /> : <FiPlus />} {addingDate ? "..." : "เพิ่มวันที่"}
                                         </button>
                                     </div>
-                                    {/* <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1" > */}
                                     <div className="grid grid-cols-2 gap-2 max-h-[155px] overflow-y-auto pr-1 ">
                                         {manageDates.length > 0 ? manageDates.map((item) => (
-                                            <div
-                                                key={item.date}
-                                                className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all h-[45px] ${item.status === "OPEN"
-                                                    ? "bg-emerald-50 border-emerald-200"
-                                                    : "bg-gray-50 border-gray-200 opacity-75"
-                                                    }`}
-                                            >
+                                            <div key={item.date} className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all h-[45px] ${item.status === "OPEN" ? "bg-emerald-50 border-emerald-200" : "bg-gray-50 border-gray-200 opacity-75"}`}>
                                                 <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={() => handleToggleStatus(item)}
-                                                        className={`p-1.5 rounded-full transition-colors ${item.status === "OPEN"
-                                                            ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
-                                                            : "bg-gray-200 text-gray-500 hover:bg-gray-300"
-                                                            }`}
-                                                        title={item.status === "OPEN" ? "คลิกเพื่อปิด" : "คลิกเพื่อเปิด"}
-                                                    >
+                                                    <button onClick={() => handleToggleStatus(item)} className={`p-1.5 rounded-full transition-colors ${item.status === "OPEN" ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-gray-200 text-gray-500 hover:bg-gray-300"}`} title={item.status === "OPEN" ? "คลิกเพื่อปิด" : "คลิกเพื่อเปิด"}>
                                                         {item.status === "OPEN" ? <FiUnlock size={14} /> : <FiLock size={14} />}
                                                     </button>
-                                                    <span className={`text-sm font-medium ${item.status === "OPEN" ? "text-emerald-900" : "text-gray-500 line-through decoration-gray-400"}`}>
-                                                        {formatThaiDateAdmin(item.date)}
-                                                    </span>
+                                                    <span className={`text-sm font-medium ${item.status === "OPEN" ? "text-emerald-900" : "text-gray-500 line-through decoration-gray-400"}`}>{formatThaiDateAdmin(item.date)}</span>
                                                 </div>
                                                 <button onClick={() => handleDeleteDate(item.date)} className="text-gray-400 hover:text-rose-500 p-1 rounded-md hover:bg-rose-50 transition-colors"><FiTrash2 size={16} /></button>
                                             </div>
@@ -2049,29 +2454,11 @@ export default function AdminPage() {
                                     </div>
                                 </div>
 
-
-
-                                {/* ส่วนแสดงผลจัดการคิว */}
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col h-[350px]">
                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                            <FiLayers className="text-blue-600" /> จัดการช่วงเวลา / คิว ({Array.isArray(slots) ? slots.length : 0})
-                                        </h3>
-                                        {/* ปุ่มเพิ่มรอบเวลาใหม่ */}
-                                        {/* <button
-                                            onClick={handleAddSlot}
-                                            className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded hover:bg-emerald-100 flex items-center gap-1 transition-colors"
-                                        >
-                                            <FiPlus /> เพิ่มรอบ
-                                        </button> */}
-                                        <button
-                                            onClick={handleAddSlot}
-                                            className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-sm"
-                                        >
-                                            <FiPlus /> เพิ่ม
-                                        </button>
+                                        <h3 className="text-sm font-bold text-gray-600 flex items-center gap-2"><FiLayers className="text-blue-600" /> จัดการช่วงเวลา / คิว ({Array.isArray(slots) ? slots.length : 0})</h3>
+                                        <button onClick={handleAddSlot} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700 flex items-center gap-2 transition-colors shadow-sm"><FiPlus /> เพิ่ม</button>
                                     </div>
-
                                     <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                                         {Array.isArray(slots) && slots.length > 0 ? (
                                             slots.map((s) => (
@@ -2079,39 +2466,12 @@ export default function AdminPage() {
                                                     <div className="flex justify-between items-center">
                                                         <span className="font-bold text-sm text-gray-700">{s.label}</span>
                                                         <div className="flex gap-1">
-                                                            {/* ปุ่มแก้ไข */}
-                                                            <button
-                                                                onClick={() => handleEditSlotFull(s)}
-                                                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                                                                title="แก้ไข"
-                                                            >
-                                                                <FiEdit2 size={12} />
-                                                            </button>
-                                                            {/* ปุ่มลบ */}
-                                                            <button
-                                                                onClick={() => handleDeleteSlot(s)}
-                                                                className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
-                                                                title="ลบ"
-                                                            >
-                                                                <FiTrash2 size={12} />
-                                                            </button>
+                                                            <button onClick={() => handleEditSlotFull(s)} className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all" title="แก้ไข"><FiEdit2 size={12} /></button>
+                                                            <button onClick={() => handleDeleteSlot(s)} className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all" title="ลบ"><FiTrash2 size={12} /></button>
                                                         </div>
                                                     </div>
-                                                    {/* Progress Bar */}
                                                     <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                                        {/* <div
-                                                            className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                                                            style={{ width: `${(s.booked / s.capacity) * 100}%` }}
-                                                        ></div> */}
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0
-                                                                ? 'bg-rose-500' // สีแดงเมื่อเต็ม
-                                                                : (s.booked / s.capacity) >= 0.6
-                                                                    ? 'bg-orange-500' // 🔥 สีส้มเมื่อจองเกิน 80%
-                                                                    : 'bg-emerald-500' // สีเขียวปกติ
-                                                                }`}
-                                                            style={{ width: `${(s.booked / s.capacity) * 100}%` }}
-                                                        ></div>
+                                                        <div className={`h-full rounded-full transition-all duration-500 ${s.remaining === 0 ? 'bg-rose-500' : (s.booked / s.capacity) >= 0.6 ? 'bg-orange-500' : 'bg-emerald-500'}`} style={{ width: `${(s.booked / s.capacity) * 100}%` }}></div>
                                                     </div>
                                                     <div className="flex justify-between text-[11px] text-gray-500">
                                                         <span>จอง {s.booked}/{s.capacity}</span>
@@ -2120,12 +2480,7 @@ export default function AdminPage() {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="text-center text-gray-400 text-xs mt-10">
-                                                <p>ไม่พบข้อมูลรอบเวลา</p>
-                                                <button onClick={handleAddSlot} className="mt-2 text-emerald-600 underline hover:text-emerald-700">
-                                                    + เพิ่มรอบแรก
-                                                </button>
-                                            </div>
+                                            <div className="text-center text-gray-400 text-xs mt-10"><p>ไม่พบข้อมูลรอบเวลา</p><button onClick={handleAddSlot} className="mt-2 text-emerald-600 underline hover:text-emerald-700">+ เพิ่มรอบแรก</button></div>
                                         )}
                                     </div>
                                 </div>
