@@ -151,7 +151,7 @@ export default function Home() {
           setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
         } else {
-          // liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
+          liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
