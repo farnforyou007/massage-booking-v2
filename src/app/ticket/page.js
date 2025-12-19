@@ -144,7 +144,7 @@ function TicketContent() {
       `}</style>
 
             {/* Navigation Back */}
-            <div className="w-full max-w-md mb-6 flex justify-between items-center">
+            {/* <div className="w-full max-w-md mb-6 flex justify-between items-center">
                 <Link
                     href="/"
                     className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-600 transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
@@ -152,7 +152,32 @@ function TicketContent() {
                     <FiArrowLeft />
                     กลับหน้าจองคิว
                 </Link>
+            </div> */}
+
+            {/* Navigation Bar รวม 2 ปุ่มในแถวเดียว */}
+            <div className="w-full max-w-md mb-6 flex justify-between items-center">
+
+                {/* ปุ่มซ้าย: กลับหน้าจองคิว */}
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-600 transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
+                >
+                    <FiArrowLeft />
+                    กลับหน้าจองคิว
+                </Link>
+
+                {/* ปุ่มขวา: กลับหน้าประวัติ */}
+                <Link
+                    href="/history"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-600 transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
+                >
+                    กลับหน้าประวัติ
+                    <FiArrowLeft className="rotate-180" /> {/* กลับด้านลูกศรให้ชี้ไปขวาเพื่อให้ดูสมดุล (Option) */}
+                </Link>
+
             </div>
+
+
 
             {/* ---- MAIN CARD ---- */}
             <div className="w-full max-w-md bg-white rounded-3xl ticket-shadow overflow-hidden relative animate-fade-in-up min-h-[400px] flex flex-col">
