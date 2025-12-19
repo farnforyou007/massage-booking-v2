@@ -95,10 +95,21 @@ export default function Home() {
     const fetchDates = async () => {
       setLoadingDates(true);
       try {
+        // const { data, error } = await supabase
+        //   .from('days')
+        //   .select('date')
+        //   .eq('status', 'OPEN')
+        //   .order('date', { ascending: true });
+
+        // 1. หาค่า "วันนี้" ในรูปแบบ YYYY-MM-DD (เช่น 2025-12-19)
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // 2. สั่ง Database ว่า "เอาเฉพาะวันที่ มากกว่าหรือเท่ากับ วันนี้"
         const { data, error } = await supabase
           .from('days')
           .select('date')
           .eq('status', 'OPEN')
+          .gte('date', todayStr)  // 🔥 เพิ่มบรรทัดนี้ครับ (gte = Greater Than or Equal)
           .order('date', { ascending: true });
 
         if (error) throw error;
@@ -568,8 +579,8 @@ export default function Home() {
 
           {message.text && (
             <div className={`rounded-2xl p-4 flex items-start gap-3 text-sm shadow-sm border animate-pulse ${message.ok
-                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                : "bg-rose-50 text-rose-800 border-rose-200"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-rose-50 text-rose-800 border-rose-200"
               }`}>
               {message.ok ? (
                 <FiCheckCircle className="mt-0.5 text-lg flex-shrink-0" />
