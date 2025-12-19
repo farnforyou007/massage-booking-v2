@@ -385,7 +385,7 @@ export default function MyHistoryPage() {
                                 </div>
                                 {booking.status === 'BOOKED' && (
                                     <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-semibold flex items-center gap-1">
-                                        <FiList /> ดูตั๋ว
+                                        <FiList /> ดูรายละเอียด / ยกเลิก
                                     </Link>
                                 )}
                             </div>

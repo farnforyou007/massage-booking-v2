@@ -2635,7 +2635,7 @@ export default function AdminPage() {
                                     {scanData.status === "CHECKED_IN" && (
                                         <div className="bg-blue-50 border border-blue-100 text-blue-700 p-4 rounded-2xl text-xs flex gap-3 items-center">
                                             <FiCheckCircle size={18} className="flex-shrink-0" />
-                                            <b>ผู้ป่วยท่านนี้เข้ารับบริการเรียบร้อยแล้ว</b>
+                                            <b>ท่านนี้เข้ารับบริการเรียบร้อยแล้ว</b>
                                         </div>
                                     )}
                                     {scanData.status === "CANCELLED" && (
