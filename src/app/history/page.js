@@ -270,8 +270,8 @@ export default function MyHistoryPage() {
             if (userId === "MOCK_USER") {
                 setTimeout(() => {
                     setBookings([
-                        { id: 1, booking_date: '2025-12-25', slot_label: '09:00-10:00', status: 'BOOKED', booking_code: 'BK-8899' },
-                        { id: 2, booking_date: '2025-11-10', slot_label: '13:00-14:00', status: 'CHECKED_IN', booking_code: 'BK-1122' }
+                        { id: 1, booking_date: '2025-12-25', slot_label: '09:00-10:00', status: 'BOOKED', booking_code: '0615671014-8899' },
+                        { id: 2, booking_date: '2025-11-10', slot_label: '13:00-14:00', status: 'CHECKED_IN', booking_code: '0615671014-1122' }
                     ]);
                     setLoading(false);
                 }, 1000); // หน่วงเวลาให้เห็น Skeleton
@@ -381,12 +381,12 @@ export default function MyHistoryPage() {
                             <div className="flex justify-between items-end">
                                 <div className="text-xs text-gray-400">
                                     <p>รหัสการจอง</p>
-                                    <p className="text-lg font-mono font-bold text-gray-600 tracking-wider">#{booking.booking_code}</p>
+                                    <p className="text-xs md:text-base font-mono font-bold text-gray-600 tracking-wider">#{booking.booking_code}</p>
                                 </div>
 
                                 {booking.status === 'BOOKED' && (
-                                    <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-medium flex items-center gap-1">
-                                        <FiList /> รายละเอียด / ยกเลิก
+                                    <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs  bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-medium flex items-center gap-1">
+                                        <FiList className="text-xs" /> รายละเอียด / ยกเลิก
                                     </Link>
                                 )}
 
