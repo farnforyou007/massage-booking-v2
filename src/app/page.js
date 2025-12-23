@@ -17,7 +17,7 @@ import {
   FiActivity,
   FiLoader
 } from "react-icons/fi";
-
+import { useRouter } from "next/navigation";
 export default function Home() {
   // --- State Management ---
   const [date, setDate] = useState("");
@@ -46,8 +46,9 @@ export default function Home() {
     displayName: "",
     pictureUrl: null // ตัวแปรที่เก็บ URL รูปภาพ
   });
-  const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
+  const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
+  const router = useRouter(); // ประกาศตัวแปร
   // // --- 1. Load Initial Data (LIFF + Dates) ---
   // useEffect(() => {
   //   const init = async () => {
@@ -171,6 +172,18 @@ export default function Home() {
 
     initLiff();
   }, [LIFF_ID]);
+
+  //  2. เพิ่ม useEffect ดักจับแอดมิน
+  useEffect(() => {
+    // เช็คว่าในเครื่องมี Token ของแอดมินไหม? 
+    // (ชื่อ 'admin_token' ต้องตรงกับตอนที่คุณสั่ง setItem ในหน้า Login แอดมินนะครับ)
+    const adminToken = localStorage.getItem("admin_token");
+
+    if (adminToken) {
+      // ถ้ามี -> ให้เด้งไปหน้า /admin ทันที
+      router.push("/admin");
+    }
+  }, []);
 
   // --- 2. Load Slots (เมื่อเลือกวัน) ---
   useEffect(() => {
