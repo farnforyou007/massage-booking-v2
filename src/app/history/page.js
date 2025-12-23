@@ -383,9 +383,16 @@ export default function MyHistoryPage() {
                                     <p>รหัสการจอง</p>
                                     <p className="text-lg font-mono font-bold text-gray-600 tracking-wider">#{booking.booking_code}</p>
                                 </div>
+
                                 {booking.status === 'BOOKED' && (
-                                    <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-semibold flex items-center gap-1">
-                                        <FiList /> ดูรายละเอียด / ยกเลิก
+                                    <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-medium flex items-center gap-1">
+                                        <FiList /> รายละเอียด / ยกเลิก
+                                    </Link>
+                                )}
+
+                                {booking.status !== 'BOOKED' && (
+                                    <Link href={`/ticket?code=${booking.booking_code}`} className="text-xs bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-medium flex items-center gap-1">
+                                        <FiList /> รายละเอียด
                                     </Link>
                                 )}
                             </div>
