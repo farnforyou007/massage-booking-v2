@@ -174,16 +174,16 @@ export default function Home() {
   }, [LIFF_ID]);
 
   //  2. เพิ่ม useEffect ดักจับแอดมิน
-  useEffect(() => {
-    // เช็คว่าในเครื่องมี Token ของแอดมินไหม? 
-    // (ชื่อ 'admin_token' ต้องตรงกับตอนที่คุณสั่ง setItem ในหน้า Login แอดมินนะครับ)
-    const adminToken = localStorage.getItem("admin_token");
+  // useEffect(() => {
+  //   // เช็คว่าในเครื่องมี Token ของแอดมินไหม? 
+  //   // (ชื่อ 'admin_token' ต้องตรงกับตอนที่คุณสั่ง setItem ในหน้า Login แอดมินนะครับ)
+  //   const adminToken = localStorage.getItem("admin_token");
 
-    if (adminToken) {
-      // ถ้ามี -> ให้เด้งไปหน้า /admin ทันที
-      router.push("/admin");
-    }
-  }, []);
+  //   if (adminToken) {
+  //     // ถ้ามี -> ให้เด้งไปหน้า /admin ทันที
+  //     router.push("/admin");
+  //   }
+  // }, []);
 
   // --- 2. Load Slots (เมื่อเลือกวัน) ---
   useEffect(() => {
