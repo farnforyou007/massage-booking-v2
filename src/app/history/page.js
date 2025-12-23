@@ -198,6 +198,7 @@
 // }
 
 // ver2
+
 'use client'
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -298,7 +299,14 @@ export default function MyHistoryPage() {
                     }
                 } else {
                     if (liff.isInClient()) {
+                        // ถ้าเปิดในแอป LINE แต่ยังไม่ล็อกอิน (เคสหายาก) -> บังคับล็อกอิน
                         liff.login();
+                    } else {
+                        // ✅ FIX: ถ้าเปิดบนคอม (Browser) และไม่ได้ล็อกอิน -> ให้ใช้ MOCK DATA เลย
+                        console.log("💻 PC Browser detected: Using Mock Mode");
+                        setProfile({ displayName: "Test User (PC)", pictureUrl: "", userId: "MOCK_USER" });
+                        setCurrentUserId("MOCK_USER");
+                        fetchHistory("MOCK_USER");
                     }
                 }
             } catch (err) {
@@ -450,14 +458,17 @@ export default function MyHistoryPage() {
                                 {booking.status === 'BOOKED' ? (
                                     <Link
                                         href={`/ticket?code=${booking.booking_code}`}
-                                        className="text-xs bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
+                                        // className="text-xs bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-1 shadow-sm shadow-red-200"
+                                        className="text-xs bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-medium flex items-center gap-1 shadow-sm shadow-red-200"
                                     >
-                                        <FiList className="text-sm" /> ดูตั๋ว / จัดการ
+                                        <FiList className="text-sm" /> รายละเอียด / ยกเลิก
                                     </Link>
                                 ) : (
                                     <Link
                                         href={`/ticket?code=${booking.booking_code}`}
-                                        className="text-xs bg-gray-50 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors font-medium flex items-center gap-1"
+                                        // className="text-xs bg-gray-50 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors font-medium flex items-center gap-1"
+                                        // className="text-xs bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
+                                    className="text-xs  bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
                                     >
                                         <FiList /> รายละเอียด
                                     </Link>
