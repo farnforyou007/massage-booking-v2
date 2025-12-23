@@ -162,7 +162,7 @@ export default function Home() {
           setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
         } else {
-          liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
+          // liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
@@ -222,7 +222,7 @@ export default function Home() {
         if (computedSlots.length === 0) {
           setSlotStatus({ text: "❌ วันนี้ยังไม่มีรอบว่าง หรือปิดให้บริการ", type: "error" });
         } else {
-          setSlotStatus({ text: `✅ เลือกช่วงเวลาที่ต้องการ`, type: "success" });
+          setSlotStatus({ text: ` เลือกช่วงเวลาที่ต้องการ`, type: "success" });
         }
 
       } catch (err) {
@@ -471,7 +471,7 @@ export default function Home() {
                   required
                 >
                   <option value="" className="placeholder:text-gray-800">
-                    {loadingDates ? "⏳ กำลังโหลดวันที่..." : availableDates.length === 0 ? "⚠️ ยังไม่เปิดให้จอง" : "-- กรุณาเลือกวันที่ --"}
+                    {loadingDates ? "⏳ กำลังโหลดวันที่..." : availableDates.length === 0 ? "⚠️ ยังไม่เปิดให้ลงทะเบียน" : "-- กรุณาเลือกวันที่ --"}
                   </option>
                   {availableDates.map((d) => (
                     <option key={d} value={d}>
@@ -485,7 +485,7 @@ export default function Home() {
               </div>
 
               {/* Slot Status Alert */}
-              {slotStatus.text && (
+              {/* {slotStatus.text && (
                 <div className={`mt-2 text-xs md:text-sm p-3 rounded-lg flex items-center gap-2 animate-fade-in-up transition-colors duration-300 
                                     ${slotStatus.type === "loading" ? "bg-orange-50 text-orange-700 border border-orange-200" :
                     slotStatus.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
@@ -493,6 +493,27 @@ export default function Home() {
                   }`}>
                   {slotStatus.type === "loading" && <FiLoader className="animate-spin" />}
                   {slotStatus.text}
+                </div>
+              )} */}
+              {/* Slot Status Alert */}
+              {slotStatus.text && (
+                <div className={`mt-2 text-xs md:text-sm p-3 rounded-lg flex items-center gap-2 animate-fade-in-up transition-colors duration-300 
+        ${slotStatus.type === "loading" ? "bg-orange-50 text-orange-700 border border-orange-200" :
+                    slotStatus.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      "bg-red-50 text-red-700 border border-red-200"
+                  }`}>
+
+                  {/* 1. ไอคอน Loading (หมุนๆ) */}
+                  {slotStatus.type === "loading" && <FiLoader className="animate-spin text-lg" />}
+
+                  {/* 2. 🔥 เพิ่ม: ไอคอน Success (ติ๊กถูก) ตรงนี้ครับ */}
+                  {slotStatus.type === "success" && <FiCheckCircle className="text-lg" />}
+
+                  {/* 3. (แถม) ไอคอน Error (ตกใจ) ถ้าอยากใส่เพิ่ม */}
+                  {slotStatus.type === "error" && <FiAlertCircle className="text-lg" />}
+
+                  {/* ข้อความ */}
+                  <span className="font-medium">{slotStatus.text}</span>
                 </div>
               )}
             </div>

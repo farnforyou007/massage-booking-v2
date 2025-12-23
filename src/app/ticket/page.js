@@ -163,7 +163,7 @@ function TicketContent() {
                     className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-emerald-600 transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
                 >
                     <FiArrowLeft />
-                    กลับหน้าจองคิว
+                    กลับหน้าลงทะเบียน
                 </Link>
 
                 {/* ปุ่มขวา: กลับหน้าประวัติ */}
