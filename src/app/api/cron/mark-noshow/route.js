@@ -47,52 +47,86 @@ export async function GET(request) {
 
                 const flexMsg = {
                     type: "flex",
-                    altText: "แบบสอบถามการเข้ารับบริการ",
+                    altText: `❌ แจ้งเตือนการผิดนัด: ${b.booking_code}`,
                     contents: {
                         type: "bubble",
+                        // --- 1. ส่วนหัว (Header) ---
                         header: {
                             type: "box",
                             layout: "vertical",
                             contents: [
-                                { type: "text", text: "MISSED APPOINTMENT", color: "#ffffff", weight: "bold", size: "xs", align: "center" }
+                                { type: "text", text: "MISSED APPOINTMENT", weight: "bold", color: "#ffffff", size: "xs", align: "center" },
+                                { type: "text", text: "ท่านไม่ได้เข้ารับบริการ", weight: "bold", color: "#ffffff", size: "lg", align: "center", margin: "md" }
                             ],
-                            backgroundColor: "#EF4444" // สีแดง (บ่งบอกสถานะ)
+                            backgroundColor: "#EF4444", // 🔥 เปลี่ยนเป็นสีแดง (Red-500) ให้ดูแตกต่าง
+                            paddingAll: "20px"
                         },
+                        // --- 2. ส่วนเนื้อหา (Body) ---
                         body: {
                             type: "box",
                             layout: "vertical",
                             contents: [
-                                // 1. หัวข้อ: ใช้คำว่า "ไม่ได้เข้ารับบริการ" แทน "ไม่มาตามนัด"
-                                { type: "text", text: "ท่านไม่ได้เข้ารับบริการตามนัด", weight: "bold", size: "lg", color: "#333333", align: "center" },
-
-                                // 2. วันที่
-                                { type: "text", text: `รอบวันที่: ${b.booking_date}`, size: "sm", color: "#666666", margin: "md", align: "center" },
-
+                                { type: "text", text: `คุณ ${b.customer_name || 'ลูกค้า'}`, weight: "bold", size: "xl", align: "center", color: "#1F2937" },
+                                { type: "text", text: `รหัสจอง: ${b.booking_code}`, weight: "bold", size: "md", align: "center", color: "#EF4444", margin: "sm" },
                                 { type: "separator", margin: "lg" },
 
-                                // 3. เนื้อหา: ขอความร่วมมือแบบนุ่มนวล
+                                // กล่องรายละเอียด
                                 {
-                                    type: "text",
-                                    text: "ทางเราขอรบกวนสอบถามสาเหตุที่ไม่สามารถเข้ารับบริการได้ เพื่อนำข้อมูลไปปรับปรุงให้ดียิ่งขึ้นครับ",
-                                    wrap: true,
-                                    size: "sm",
-                                    color: "#666666",
+                                    type: "box",
+                                    layout: "vertical",
                                     margin: "lg",
-                                    align: "center"
+                                    spacing: "sm",
+                                    contents: [
+                                        // วันที่
+                                        {
+                                            type: "box",
+                                            layout: "baseline",
+                                            contents: [
+                                                { type: "text", text: "วันที่", color: "#aaaaaa", size: "sm", flex: 2 },
+                                                { type: "text", text: b.booking_date, wrap: true, color: "#666666", size: "sm", flex: 5, weight: "bold" }
+                                            ]
+                                        },
+                                        // เวลา
+                                        {
+                                            type: "box",
+                                            layout: "baseline",
+                                            contents: [
+                                                { type: "text", text: "เวลา", color: "#aaaaaa", size: "sm", flex: 2 },
+                                                { type: "text", text: b.slot_label || "ไม่ระบุ", wrap: true, color: "#666666", size: "sm", flex: 5, weight: "bold" }
+                                            ]
+                                        },
+                                        // สถานที่ (ใส่เหมือนเดิมเพื่อให้รูปแบบสวยงาม)
+                                        {
+                                            type: "box",
+                                            layout: "baseline",
+                                            contents: [
+                                                { type: "text", text: "สถานที่", color: "#aaaaaa", size: "sm", flex: 2 },
+                                                { type: "text", text: "อาคารสหเวช ชั้น 7\nห้อง TTM704", wrap: true, color: "#666666", size: "sm", flex: 5 }
+                                            ]
+                                        },
+                                        // 💡 เพิ่มข้อความขอเหตุผล (ส่วนสำคัญ)
+                                        {
+                                            type: "box",
+                                            layout: "vertical",
+                                            margin: "lg",
+                                            contents: [
+                                                { type: "text", text: "ทางเราขอรบกวนสอบถามสาเหตุที่ไม่สามารถเข้ารับบริการได้ เพื่อนำข้อมูลไปปรับปรุงระบบครับ", wrap: true, size: "xs", color: "#9CA3AF", align: "center" }
+                                            ]
+                                        }
+                                    ]
                                 }
                             ]
                         },
+                        // --- 3. ส่วนท้าย (Footer) ---
                         footer: {
                             type: "box",
                             layout: "vertical",
                             contents: [
                                 {
                                     type: "button",
-                                    // 4. ปุ่ม: ใช้คำว่า "ให้ข้อมูล" หรือ "แจ้งสาเหตุ"
-                                    action: { type: "uri", label: "แจ้งสาเหตุ", uri: feedbackUrl },
+                                    action: { type: "uri", label: "ระบุสาเหตุ", uri: feedbackUrl }, // ลิงก์ไปหน้า Feedback
                                     style: "primary",
-                                    color: "#EF4444",
-                                    height: "sm"
+                                    color: "#EF4444" // สีปุ่มแดง ให้เข้ากับ Header
                                 }
                             ]
                         }
