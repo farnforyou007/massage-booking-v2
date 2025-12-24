@@ -231,7 +231,7 @@ const supabase = createClient(
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url , line_display_name } = body;
+        const { name, phone, date, slot_id, slotLabel, lineUserId, line_picture_url, line_display_name } = body;
 
         // -----------------------------------------------------------------------
         // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
@@ -258,6 +258,24 @@ export async function POST(request) {
             const thaiDate = `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`;
 
             // ✅ ใช้ HTML แทน String ธรรมดาเพื่อให้จัดระเบียบได้
+            //             const htmlMessage = `
+            //     <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
+            //         <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
+            //             🚫 <b>ทำรายการไม่สำเร็จ</b>
+            //         </p>
+            //         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+            //         <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>ท่านมีรายการจองอยู่แล้ว :</b></p>
+            //         <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
+            //             <p>• ${thaiDate}</p>
+            //             <p>• รอบ ${pendingBooking.slot_label}</p>
+            //         </div>
+            //         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+            //         <p style="color: #6b7280; font-size: 11px; text-align: center;">
+            //             💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
+            //         </p>
+            //     </div>
+            // `;
+
             const htmlMessage = `
     <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
         <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
@@ -269,9 +287,17 @@ export async function POST(request) {
             <p>• ${thaiDate}</p>
             <p>• รอบ ${pendingBooking.slot_label}</p>
         </div>
+        
+        <div style="margin-top: 10px; text-align: center;">
+            <a href="/ticket?code=${pendingBooking.booking_code || pendingBooking.code}" 
+               style="display: inline-block; padding: 6px 15px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
+               🎟️ ดูรายละเอียด / ยกเลิก
+            </a>
+        </div>
+
         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
         <p style="color: #6b7280; font-size: 11px; text-align: center;">
-            💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
+            💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ
         </p>
     </div>
 `;
@@ -313,7 +339,7 @@ export async function POST(request) {
             booking_code: newBookingCode,
             line_user_id: lineUserId || 'NO_LIFF',
             status: 'BOOKED',
-            line_picture_url: line_picture_url || 'No line picture' ,
+            line_picture_url: line_picture_url || 'No line picture',
             line_display_name: line_display_name || 'No line name'
         }]);
 

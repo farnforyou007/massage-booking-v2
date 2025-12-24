@@ -477,9 +477,9 @@ function renderStatus(status) {
     const s = String(status || "").toUpperCase();
     if (s === "BOOKED") {
         return {
-            text: "รอใช้บริการ",
+            text: "ลงทะเบียนสำเร็จ ! รอใช้บริการ",
             cls: "bg-emerald-100 text-emerald-700 border-emerald-200",
-            icon: <FiClock />,
+            icon: <FiCheckCircle />,
         };
     } else if (s === "CHECKED_IN") {
         return {
