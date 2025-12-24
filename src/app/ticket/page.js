@@ -479,7 +479,7 @@ function renderStatus(status) {
         return {
             text: "รอใช้บริการ",
             cls: "bg-emerald-100 text-emerald-700 border-emerald-200",
-            icon: <FiCheckCircle />,
+            icon: <FiClock />,
         };
     } else if (s === "CHECKED_IN") {
         return {
@@ -584,7 +584,7 @@ function TicketContent() {
             setErrorMsg("เกิดข้อผิดพลาด: " + err.message);
         } finally {
             // หน่วงเวลาเล็กน้อยเพื่อให้เห็น Skeleton สวยๆ (Optional)
-            setTimeout(() => setLoading(false), 500);
+            setTimeout(() => setLoading(false), 200);
         }
     }
 
