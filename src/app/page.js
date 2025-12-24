@@ -125,6 +125,7 @@ export default function Home() {
           setLineUserId(profile.userId);
           setLineDisplayName(profile.displayName);
           console.log("LINE Login Success:", profile.userId);
+          console.log("LINE displayName:", profile.displayName);
         } else {
           liff.login(); // เปิดบรรทัดนี้ถ้าต้องการบังคับ Login ทันที
         }
