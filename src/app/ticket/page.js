@@ -5,6 +5,8 @@ import Link from "next/link";
 import { getBookingByCode, userCancelBooking } from "../../api"; // เรียก API ใหม่
 import { QRCodeCanvas } from "qrcode.react";
 import Swal from "sweetalert2";
+import { supabase } from "../../supabaseClient"; // เรียก Supabase
+
 import {
     FiCalendar, FiClock, FiUser, FiPhone, FiHash,
     FiAlertCircle, FiCheckCircle, FiArrowLeft, FiActivity,
@@ -39,7 +41,7 @@ function renderStatus(status) {
             icon: <FiXCircle />,
         };
     }
-    
+
     return {
         text: s || "รอตรวจสอบ",
         cls: "bg-gray-100 text-gray-600 border-gray-200",
@@ -136,6 +138,59 @@ function TicketContent() {
             }
         }
     };
+
+    useEffect(() => {
+        // ถ้ายังไม่มีข้อมูลการจอง หรือไม่มีรหัสจอง ให้ข้ามไปก่อน
+        if (!booking || !booking.booking_code) return;
+
+        console.log("🟢 เริ่มดักฟังสถานะ Realtime...");
+
+        // สร้างตัวดักฟัง (Subscription)
+        const channel = supabase
+            .channel('realtime-ticket-status') // ตั้งชื่อ channel อะไรก็ได้
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE', // ดักเฉพาะการแก้ไขข้อมูล
+                    schema: 'public',
+                    table: 'bookings',
+                    filter: `booking_code=eq.${booking.booking_code}` // 🔥 สำคัญ: ดักเฉพาะแถวที่เป็นของลูกค้านี้เท่านั้น
+                },
+                (payload) => {
+                    console.log("⚡ มีการเปลี่ยนแปลงสถานะ:", payload.new);
+
+                    // อัปเดต State ทันที
+                    const newData = payload.new;
+                    setBooking(prev => ({
+                        ...prev,
+                        status: newData.status, // อัปเดตสถานะ
+                        // อัปเดตค่าอื่นๆ เผื่อมี
+                    }));
+
+                    // ✨ ลูกเล่น: ถ้าสถานะเปลี่ยนเป็น CHECKED_IN ให้เด้ง Alert บอกลูกค้า
+                    if (newData.status === 'CHECKED_IN') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'เช็คอินสำเร็จ!',
+                            text: 'เจ้าหน้าที่ทำการยืนยันรายการแล้ว',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            backdrop: `rgba(0,128,0,0.4)` // พื้นหลังสีเขียวจางๆ
+                        });
+
+                        // สั่นมือถือลูกค้า 1 ที (ถ้าทำได้)
+                        if (navigator.vibrate) navigator.vibrate(200);
+                    }
+                }
+            )
+            .subscribe();
+
+        // เมื่อปิดหน้านี้ ให้ยกเลิกการดักฟัง (เพื่อไม่ให้เปลืองทรัพยากร)
+        return () => {
+            supabase.removeChannel(channel);
+        };
+
+    }, [booking?.booking_code]); // ทำงานเมื่อมี booking_code มาแล้ว
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50 px-4 py-8 font-sans">
