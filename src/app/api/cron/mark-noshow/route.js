@@ -43,7 +43,7 @@ export async function GET(request) {
             if (b.line_user_id && b.line_user_id.length > 10) {
                 // ลิงก์ไปยังหน้า Feedback (เดี๋ยวค่อยสร้างหน้านี้ทีหลัง)
                 // สมมติ URL เว็บคุณคือ https://myshop.vercel.app
-                const feedbackUrl = `${process.env.NEXT_PUBLIC_LIFF_URL}/feedback?code=${b.booking_code}`;
+                const feedbackUrl = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/feedback?code=${b.booking_code}`;
 
                 const flexMsg = {
                     type: "flex",
