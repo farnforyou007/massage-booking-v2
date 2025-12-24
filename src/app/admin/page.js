@@ -122,7 +122,7 @@ export default function AdminPage() {
     const [autoCheckIn, setAutoCheckIn] = useState(true);
     // 🔥 2. เพิ่ม Ref เพื่อกันการสแกนรัวๆ (Scan Lock)
     const isProcessingScan = useRef(false);
-    const [torchOn, setTorchOn] = useState(false);
+    // const [torchOn, setTorchOn] = useState(false);
 
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
@@ -987,18 +987,11 @@ export default function AdminPage() {
     //     }
     // };
 
-    // const stopScanner = async () => {
-    //     if (scannerRef.current) {
-    //         try { await scannerRef.current.clear(); } catch (e) { }
-    //         scannerRef.current = null;
-    //         setScanStatus("idle");
-    //     }
-    // };
-    
-
     const startScanner = async () => {
+        // เช็คว่ามี element กล้องไหม
         if (!document.getElementById("reader")) return;
 
+        // เคลียร์ของเก่าถ้ามีค้างอยู่
         if (scannerRef.current) await stopScanner();
 
         const html5QrCode = new Html5Qrcode("reader");
@@ -1008,47 +1001,43 @@ export default function AdminPage() {
         setScanErrorMsg("");
 
         try {
-            // 1. เปิดกล้อง (ส่ง config แค่จำเป็น)
+            // ✅ สั่งเปิดกล้องแบบมาตรฐาน (Standard Mode)
+            // ไม่ต้องมีการปรับแต่ง Pro Mode ใดๆ ให้ปวดหัว
             await html5QrCode.start(
-                { facingMode: "environment" },
+                { facingMode: "environment" }, // ถ้าเป็น PC มันจะหากล้องเว็บแคมให้อัตโนมัติ
                 {
-                    fps: 25,
-                    qrbox: { width: 250, height: 250 },
+                    fps: 20, // 🚀 ยังคงความไวไว้ที่ 20 เฟรม/วิ (สแกนไว)
+                    qrbox: { width: 250, height: 250 }, // กรอบเล็ง
                     aspectRatio: 1.0,
-                    disableFlip: false
+                    disableFlip: false 
                 },
-                (decodedText) => handleScanSuccess(decodedText),
-                () => {}
+                (decodedText) => {
+                    // เมื่อสแกนเจอ
+                    handleScanSuccess(decodedText);
+                },
+                (errorMessage) => {
+                    // ไม่ต้องทำอะไร (ปล่อยผ่าน)
+                }
             );
-
-            // 2. อัปเกรด Pro Mode (แก้ไขจุดที่ Error)
-            try {
-                setTimeout(async () => {
-                    if (html5QrCode.getState() === 2) { // 2 = SCANNING
-                        // 🔥 แก้ไข: ใช้ applyVideoConstraints ตรงๆ ไม่ต้อง getRunningTrack
-                        await html5QrCode.applyVideoConstraints({
-                            focusMode: "continuous",
-                            advanced: [
-                                { focusMode: "continuous" },
-                                { exposureMode: "continuous" },
-                                { whiteBalanceMode: "continuous" }
-                            ]
-                        });
-                        console.log("Pro mode enabled");
-                    }
-                }, 500);
-            } catch (err) {
-                console.log("Pro mode not supported, using normal mode.");
-            }
 
             setScanStatus("active");
 
         } catch (err) {
             console.error("Camera Error:", err);
             setScanStatus("error");
-            setScanErrorMsg("ไม่สามารถเปิดกล้องได้ (กรุณาอนุญาตสิทธิ์การเข้าถึง)");
+            setScanErrorMsg("ไม่สามารถเปิดกล้องได้ (กรุณาตรวจสอบการเชื่อมต่อ)");
         }
     };
+
+    // const stopScanner = async () => {
+    //     if (scannerRef.current) {
+    //         try { await scannerRef.current.clear(); } catch (e) { }
+    //         scannerRef.current = null;
+    //         setScanStatus("idle");
+    //     }
+    // };
+    
+
 
 
     const stopScanner = async () => {
@@ -2614,20 +2603,7 @@ export default function AdminPage() {
         );
     };
 
-    // ฟังก์ชันเปิด/ปิดไฟฉาย
-    const toggleTorch = async () => {
-        if (!scannerRef.current) return;
-        try {
-            // คำสั่งเปิด/ปิดไฟฉาย ของ Html5Qrcode
-            await scannerRef.current.applyVideoConstraints({
-                advanced: [{ torch: !torchOn }]
-            });
-            setTorchOn(!torchOn);
-        } catch (err) {
-            console.error(err);
-            Swal.fire({ toast: true, icon: 'warning', title: 'อุปกรณ์นี้ไม่รองรับไฟฉาย', timer: 2000, showConfirmButton: false });
-        }
-    };
+  
 
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
@@ -3321,21 +3297,6 @@ export default function AdminPage() {
                                                     }`}
                                             >
                                                 {autoCheckIn ? '⚡ Auto Check-in' : 'Manual Scan'}
-                                            </button>
-
-                                            {/* ปุ่มเปิดไฟฉาย */}
-                                            <button
-                                                onClick={toggleTorch}
-                                                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${torchOn
-                                                        ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md transform scale-105'
-                                                        : 'bg-gray-100 text-gray-500 border-gray-200'
-                                                    }`}
-                                            >
-                                                {/* ไอคอนสายฟ้า (ถ้าไม่มีใช้ตัวหนังสือแทนได้) */}
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                </svg>
-                                                {torchOn ? 'ปิดไฟ' : 'เปิดไฟ'}
                                             </button>
 
                                             {/* ปุ่มเปิด/ปิดกล้อง */}
