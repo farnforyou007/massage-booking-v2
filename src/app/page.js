@@ -44,51 +44,13 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState({
     userId: "",
     displayName: "",
-    pictureUrl: null // ตัวแปรที่เก็บ URL รูปภาพ
+    pictureUrl: null ,// ตัวแปรที่เก็บ URL รูปภาพ
+    displayName: ""
   });
 
   const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
   const router = useRouter(); // ประกาศตัวแปร
-  // // --- 1. Load Initial Data (LIFF + Dates) ---
-  // useEffect(() => {
-  //   const init = async () => {
-  //     setLoadingDates(true);
-
-  //     // A. เชื่อมต่อ LIFF (ใส่ ID ของคุณที่นี่)
-  //     try {
-  //       await liff.init({ liffId: LIFF_ID });
-  //       if (liff.isLoggedIn()) {
-  //         const profile = await liff.getProfile();
-  //         setLineUserId(profile.userId);
-  //         setLineDisplayName(profile.displayName);
-  //       } else {
-  //         liff.login();
-  //       }
-  //     } catch (err) {
-  //       console.error("LIFF Init Error:", err);
-  //     }
-
-  //     // B. ดึงวันที่เปิดจองจากตาราง 'days' ใน Supabase
-  //     try {
-  //       const { data, error } = await supabase
-  //         .from('days')
-  //         .select('date')
-  //         .eq('status', 'OPEN')
-  //         .order('date', { ascending: true });
-
-  //       if (error) throw error;
-  //       // แปลงค่าให้เป็น array วันที่ ['2025-02-14', ...]
-  //       setAvailableDates(data.map(d => d.date));
-  //     } catch (err) {
-  //       console.error("Failed to load dates:", err);
-  //       Swal.fire("ข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลวันที่ได้", "error");
-  //     } finally {
-  //       setLoadingDates(false);
-  //     }
-  //   };
-
-  //   init();
-  // }, []);
+  
   // --- 1. Load Data (แยกเป็น 2 ส่วนเพื่อให้ไวขึ้น) ---
 
   // ส่วนที่ A: โหลดวันที่เปิดจอง (ทำงานทันที ไม่ต้องรอ LINE)
@@ -156,7 +118,8 @@ export default function Home() {
           setUserProfile({
             userId: profile.userId,
             displayName: profile.displayName,
-            pictureUrl: profile.pictureUrl
+            pictureUrl: profile.pictureUrl,
+            displayName: profile.displayName
           });
 
           setLineUserId(profile.userId);
