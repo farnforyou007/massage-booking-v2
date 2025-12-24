@@ -7,6 +7,12 @@ import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from "qrcode.react";
 import { supabase } from "../../supabaseClient"; // เรียก Supabase
 
+// ลบอันเดิมออก: import * as XLSX from 'xlsx';
+// ใส่ชุดใหม่นี้แทน:
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import { toPng } from 'html-to-image'; // ✅ ใส่อันนี้แทน
+
 import {
     adminLogin,
     adminGetBookings,
@@ -1687,214 +1693,382 @@ export default function AdminPage() {
 
     };
 
-    // const handleExportExcel = () => {
-    //     if (filteredBookings.length === 0) {
+    // const handleExportExcel = async () => {
+    //     // 1. ตรวจสอบเบื้องต้นว่ามีข้อมูลในหน้าจอไหม
+    //     if (totalRecords === 0) {
     //         return Swal.fire("แจ้งเตือน", "ไม่มีข้อมูลสำหรับการส่งออก", "warning");
     //     }
 
-    //     // 1. เตรียมข้อมูลที่จะใส่ใน Excel (เลือกเฉพาะฟิลด์ที่ต้องการ)
-    //     const dataToExport = filteredBookings.map((b, index) => ({
-    //         "ลำดับ": index + 1,
-    //         "วันที่จอง": b.date,
-    //         "รอบเวลา": b.slot,
-    //         "ชื่อ-นามสกุล": b.name,
-    //         "เบอร์โทรศัพท์": b.phone,
-    //         "รหัสการจอง": b.code,
-    //         "สถานะ": b.status === 'CHECKED_IN' ? 'เข้ารับบริการแล้ว' :
-    //             b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
-    //     }));
-
-    //     // 2. สร้าง Worksheet
-    //     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-
-    //     // 3. กำหนดความกว้างของคอลัมน์เพื่อให้ดูสวยงาม
-    //     const wscols = [
-    //         { wch: 6 },  // ลำดับ
-    //         { wch: 12 }, // วันที่
-    //         { wch: 15 }, // รอบเวลา
-    //         { wch: 25 }, // ชื่อ
-    //         { wch: 15 }, // เบอร์โทร
-    //         { wch: 15 }, // รหัส
-    //         { wch: 15 }  // สถานะ
-    //     ];
-    //     worksheet['!cols'] = wscols;
-
-    //     // 4. สร้าง Workbook และบันทึกไฟล์
-    //     const workbook = XLSX.utils.book_new();
-    //     XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจอง");
-
-    //     // ตั้งชื่อไฟล์ตามวันที่ที่เลือก
-    //     XLSX.writeFile(workbook, `Booking_Report_${date}.xlsx`);
-
-    //     Toast.fire({
-    //         icon: 'success',
-    //         title: 'ส่งออกไฟล์ Excel สำเร็จ'
+    //     Swal.fire({
+    //         title: 'กำลังเตรียมข้อมูล...',
+    //         text: 'กรุณารอหลักครู่ ระบบกำลังรวบรวมข้อมูลทั้งหมด',
+    //         allowOutsideClick: false,
+    //         didOpen: () => { Swal.showLoading(); }
     //     });
+
+    //     try {
+    //         // 2. สร้าง URL สำหรับดึงข้อมูลทั้งหมด (ไม่ส่งค่า page และเพิ่ม limit ให้สูงมาก)
+    //         let exportUrl = "";
+    //         if (viewMode === "daily") {
+    //             exportUrl = `/api/admin/bookings?date=${date}&limit=10000`;
+    //         } else if (viewMode === "monthly") {
+    //             const firstDay = new Date(date);
+    //             firstDay.setDate(1);
+    //             const lastDay = new Date(date);
+    //             lastDay.setMonth(lastDay.getMonth() + 1, 0);
+    //             exportUrl = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&limit=10000`;
+    //         } else if (viewMode === "yearly") {
+    //             const currentYear = new Date(date).getFullYear();
+    //             exportUrl = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&limit=10000`;
+    //         } else {
+    //             exportUrl = `/api/admin/bookings?limit=10000`;
+    //         }
+
+    //         // 3. Fetch ข้อมูลทั้งหมดจาก API
+    //         const res = await fetch(exportUrl, {
+    //             headers: { 'Authorization': `Bearer ${authToken}` }
+    //         }).then(r => r.json());
+
+    //         if (!res.ok) throw new Error(res.message);
+
+    //         // 4. นำข้อมูลที่ได้มา Map เพื่อเตรียมใส่ Excel
+    //         const allData = res.items || [];
+    //         const dataToExport = allData.map((b, index) => ({
+    //             "ลำดับ": index + 1,
+    //             "จองเมื่อ": b.created_at ? new Date(b.created_at).toLocaleString('th-TH', {
+    //                 year: 'numeric', month: '2-digit', day: '2-digit',
+    //             }) : '',
+    //             "รอบเวลา": b.slot_label || b.slot,
+    //             "วันที่จอง": b.booking_date || b.date ? new Date(b.booking_date || b.date).toLocaleString('th-TH', {
+    //                 year: 'numeric', month: '2-digit', day: '2-digit',
+    //             }) : '',
+    //             "ชื่อ-นามสกุล": b.customer_name || b.name,
+    //             "ชื่อไลน์ (LINE)": b.line_display_name || "-",
+    //             "เบอร์โทรศัพท์": b.phone,
+    //             "รหัสการจอง": b.booking_code || b.code,
+    //             "สถานะ": b.status === 'CHECKED_IN' ? 'เข้ารับบริการแล้ว' :
+    //                 b.status === 'CANCELLED' ? 'ยกเลิก' :
+    //                     b.status === 'NO_SHOW' ? 'ไม่มาตามนัด' : 'รอใช้บริการ'
+
+    //         }));
+
+    //         // 5. สร้างไฟล์ Excel ตามปกติ
+    //         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    //         const wscols = [
+    //             { wch: 6 }, // ลำดับ
+    //             { wch: 14 },    // จองเมื่อ
+    //             { wch: 15 },    // รอบเวลา
+    //             { wch: 14 },    // วันที่จอง
+    //             { wch: 25 },    // ชื่อ-นามสกุล
+    //             { wch: 20 },    // ชื่อไลน์    
+    //             { wch: 15 },    // เบอร์โทรศัพท์
+    //             { wch: 25 },        // รหัสการจอง
+    //             { wch: 25 },    // สถานะ
+
+    //         ];
+    //         worksheet['!cols'] = wscols;
+
+    //         const workbook = XLSX.utils.book_new();
+    //         XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจองทั้งหมด");
+
+    //         Swal.close();
+    //         XLSX.writeFile(workbook, `Booking_Full_Report_${viewMode}_${date}.xlsx`);
+
+    //         Toast.fire({
+    //             icon: 'success',
+    //             title: `ส่งออกข้อมูลทั้งหมด ${allData.length} รายการสำเร็จ`
+    //         });
+
+    //     } catch (err) {
+    //         Swal.close();
+    //         Swal.fire("Error", "ไม่สามารถดึงข้อมูลเพื่อส่งออกได้: " + err.message, "error");
+    //     }
     // };
 
+    // Helper: จัดรูปแบบเบอร์โทร (08x-xxx-xxxx)
+    // Helper: จัดรูปแบบเบอร์โทร (08x-xxx-xxxx)
+    const formatPhoneForExcel = (phone) => {
+        if (!phone) return "-";
+        const clean = phone.replace(/[^0-9]/g, "");
+        if (clean.length === 10) {
+            return `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 10)}`;
+        }
+        return phone;
+    };
+
     const handleExportExcel = async () => {
-        // 1. ตรวจสอบเบื้องต้นว่ามีข้อมูลในหน้าจอไหม
         if (totalRecords === 0) {
             return Swal.fire("แจ้งเตือน", "ไม่มีข้อมูลสำหรับการส่งออก", "warning");
         }
 
         Swal.fire({
-            title: 'กำลังเตรียมข้อมูล...',
-            text: 'กรุณารอหลักครู่ ระบบกำลังรวบรวมข้อมูลทั้งหมด',
+            title: 'กำลังสร้างรายงาน...',
+            html: 'กำลังคำนวณสถิติและจัดรูปแบบ Excel<br/>กรุณารอสักครู่',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
         });
 
         try {
-            // 2. สร้าง URL สำหรับดึงข้อมูลทั้งหมด (ไม่ส่งค่า page และเพิ่ม limit ให้สูงมาก)
+            // ---------------------------------------------------------
+            // 1. เตรียม URL และ หัวข้อรายงาน (Dynamic Title)
+            // ---------------------------------------------------------
             let exportUrl = "";
+            let reportTitle = "";
+            const d = new Date(date);
+            const thaiMonth = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+            const thaiDate = d.toLocaleDateString('th-TH', { dateStyle: 'long' });
+
             if (viewMode === "daily") {
                 exportUrl = `/api/admin/bookings?date=${date}&limit=10000`;
+                reportTitle = `รายงานสรุปการจองรายวัน : ${thaiDate}`;
             } else if (viewMode === "monthly") {
-                const firstDay = new Date(date);
-                firstDay.setDate(1);
-                const lastDay = new Date(date);
-                lastDay.setMonth(lastDay.getMonth() + 1, 0);
+                const firstDay = new Date(date); firstDay.setDate(1);
+                const lastDay = new Date(date); lastDay.setMonth(lastDay.getMonth() + 1, 0);
                 exportUrl = `/api/admin/bookings?startDate=${firstDay.toISOString().slice(0, 10)}&endDate=${lastDay.toISOString().slice(0, 10)}&limit=10000`;
+                reportTitle = `รายงานสรุปการจองรายเดือน : ${thaiMonth}`;
             } else if (viewMode === "yearly") {
                 const currentYear = new Date(date).getFullYear();
                 exportUrl = `/api/admin/bookings?startDate=${currentYear}-01-01&endDate=${currentYear}-12-31&limit=10000`;
+                reportTitle = `รายงานสรุปการจองรายปี : ${currentYear + 543}`;
             } else {
                 exportUrl = `/api/admin/bookings?limit=10000`;
+                reportTitle = `รายงานสรุปการจองทั้งหมด (ภาพรวม)`;
             }
 
-            // 3. Fetch ข้อมูลทั้งหมดจาก API
+            // ---------------------------------------------------------
+            // 2. ดึงข้อมูลจาก API
+            // ---------------------------------------------------------
             const res = await fetch(exportUrl, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             }).then(r => r.json());
 
             if (!res.ok) throw new Error(res.message);
+            const allData = res.items || []; // ข้อมูลดิบ
 
-            // 4. นำข้อมูลที่ได้มา Map เพื่อเตรียมใส่ Excel
-            const allData = res.items || [];
-            const dataToExport = allData.map((b, index) => ({
-                "ลำดับ": index + 1,
-                "จองเมื่อ": b.created_at ? new Date(b.created_at).toLocaleString('th-TH', {
-                    year: 'numeric', month: '2-digit', day: '2-digit',
-                }) : '',
-                "รอบเวลา": b.slot_label || b.slot,
-                "วันที่จอง": b.booking_date || b.date ? new Date(b.booking_date || b.date).toLocaleString('th-TH', {
-                    year: 'numeric', month: '2-digit', day: '2-digit',
-                }) : '',
-                "ชื่อ-นามสกุล": b.customer_name || b.name,
-                "ชื่อไลน์ (LINE)": b.line_display_name || "-",
-                "เบอร์โทรศัพท์": b.phone,
-                "รหัสการจอง": b.booking_code || b.code,
-                "สถานะ": b.status === 'CHECKED_IN' ? 'เข้ารับบริการแล้ว' :
-                    b.status === 'CANCELLED' ? 'ยกเลิก' :
-                        b.status === 'NO_SHOW' ? 'ไม่มาตามนัด' : 'รอใช้บริการ'
+            // ---------------------------------------------------------
+            // 3. คำนวณ KPI และ %
+            // ---------------------------------------------------------
+            const total = allData.length;
+            const stats = {
+                checkedIn: allData.filter(b => b.status === 'CHECKED_IN').length,
+                booked: allData.filter(b => b.status === 'BOOKED').length,
+                cancelled: allData.filter(b => b.status === 'CANCELLED').length,
+                noShow: allData.filter(b => b.status === 'NO_SHOW').length
+            };
 
-            }));
+            // สูตรคำนวณ % (กันหารด้วย 0)
+            const getPercent = (val) => total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0.0%';
 
-            // 5. สร้างไฟล์ Excel ตามปกติ
-            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-            const wscols = [
-                { wch: 6 }, // ลำดับ
-                { wch: 14 },    // จองเมื่อ
-                { wch: 15 },    // รอบเวลา
-                { wch: 14 },    // วันที่จอง
-                { wch: 25 },    // ชื่อ-นามสกุล
-                { wch: 20 },    // ชื่อไลน์    
-                { wch: 15 },    // เบอร์โทรศัพท์
-                { wch: 25 },        // รหัสการจอง
-                { wch: 25 },    // สถานะ
-                
+            // ---------------------------------------------------------
+            // 4. เริ่มสร้าง Excel (Layout & Design)
+            // ---------------------------------------------------------
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Report', {
+                views: [{ showGridLines: false }] // ซ่อนเส้น Grid พื้นหลังเพื่อให้ดูสะอาดตา
+            });
+
+            // --- ส่วนที่ 1: หัวข้อรายงาน (Title) ---
+            worksheet.mergeCells('A1:L1'); // รวมเซลล์ยาวๆ
+            const titleCell = worksheet.getCell('A1');
+            titleCell.value = reportTitle;
+            titleCell.font = { name: 'Sarabun', size: 18, bold: true, color: { argb: 'FFFFFFFF' } }; // ขาว
+            titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF065F46' } }; // เขียวเข้ม
+            worksheet.getRow(1).height = 35;
+
+            // --- ส่วนที่ 2: ตาราง KPI (ด้านซ้าย) ---
+            // Header KPI
+            // const kpiHeaderRow = worksheet.getRow(3);
+            // kpiHeaderRow.values = ["สถานะ", "จำนวน (ราย)", "คิดเป็น %", "", ""]; // คอลัมน์ A, B, C
+            // kpiHeaderRow.font = { bold: true, color: { argb: 'FF1F2937' } };
+            // kpiHeaderRow.alignment = { horizontal: 'center' };
+            // worksheet.mergeCells('A3:B3');
+            // worksheet.getCell('A3').value = "สถานะ";
+
+            // // ข้อมูล KPI แต่ละบรรทัด
+            // const kpiRows = [
+            //     { label: "✅ เข้ารับบริการแล้ว", val: stats.checkedIn, pct: getPercent(stats.checkedIn), color: 'FFDCFCE7' }, // เขียวอ่อน
+            //     { label: "⏳ รอรับบริการ", val: stats.booked, pct: getPercent(stats.booked), color: 'FFFEF9C3' }, // เหลืองอ่อน
+            //     { label: "❌ ยกเลิก", val: stats.cancelled, pct: getPercent(stats.cancelled), color: 'FFFEE2E2' }, // แดงอ่อน
+            //     { label: "🚫 ไม่มาตามนัด", val: stats.noShow, pct: getPercent(stats.noShow), color: 'FFF3F4F6' }, // เทาอ่อน
+            //     { label: "รวมทั้งหมด", val: total, pct: "100%", color: 'FFE5E7EB', bold: true } // เทาเข้ม
+            // ];
+
+            // let currentRow = 4;
+            // kpiRows.forEach(k => {
+            //     const r = worksheet.getRow(currentRow);
+            //     worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+            //     r.getCell(1).value = k.label;
+            //     r.getCell(2).value = k.val;
+            //     r.getCell(3).value = k.pct;
+
+            //     // ตกแต่ง KPI
+            //     r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: k.color } };
+            //     r.getCell(1).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            //     r.getCell(2).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            //     r.getCell(3).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            //     r.getCell(2).alignment = { horizontal: 'center' };
+            //     r.getCell(3).alignment = { horizontal: 'center' };
+
+            //     if (k.bold) r.font = { bold: true };
+            //     currentRow++;
+            // });
+
+            // --- ส่วนที่ 2: ตาราง KPI (ด้านซ้าย) ---
+            // 1. Header KPI
+            const kpiHeaderRow = worksheet.getRow(3);
+            
+            // 🔥 แก้ไข 1: เว้นช่องว่าง "" ไว้ที่ตำแหน่งที่ 2 (เพราะคอลัมน์ B จะถูกผสาน)
+            // A="สถานะ", B=(ว่าง/ถูกผสาน), C="จำนวน", D="%"
+            kpiHeaderRow.values = ["สถานะ", "", "จำนวน (ราย)", "คิดเป็น %", ""]; 
+            
+            kpiHeaderRow.font = { bold: true, color: { argb: 'FF1F2937' } };
+            kpiHeaderRow.alignment = { horizontal: 'center', vertical: 'middle' };
+            
+            // ผสาน A3 กับ B3 (เพื่อให้คำว่า "สถานะ" กินพื้นที่กว้างขึ้น)
+            worksheet.mergeCells('A3:B3');
+
+            // 2. ข้อมูล KPI แต่ละบรรทัด
+            const kpiRows = [
+                { label: "✅ เข้ารับบริการแล้ว", val: stats.checkedIn, pct: getPercent(stats.checkedIn), color: 'FFDCFCE7' }, 
+                { label: "⏳ รอรับบริการ", val: stats.booked, pct: getPercent(stats.booked), color: 'FFFEF9C3' }, 
+                { label: "❌ ยกเลิก", val: stats.cancelled, pct: getPercent(stats.cancelled), color: 'FFFEE2E2' }, 
+                { label: "🚫 ไม่มาตามนัด", val: stats.noShow, pct: getPercent(stats.noShow), color: 'FFF3F4F6' }, 
+                { label: "รวมทั้งหมด", val: total, pct: "100%", color: 'FFE5E7EB', bold: true } 
             ];
-            worksheet['!cols'] = wscols;
 
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "รายการจองทั้งหมด");
+            let currentRow = 4;
+            kpiRows.forEach(k => {
+                const r = worksheet.getRow(currentRow);
+                
+                // ผสาน A กับ B สำหรับชื่อสถานะ
+                worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+                
+                r.getCell(1).value = k.label; // ใส่ Label ที่ A (กินพื้นที่ A+B)
+                
+                // 🔥 แก้ไข 2: ขยับตัวเลขไปใส่ช่อง 3 (C) และ 4 (D)
+                r.getCell(3).value = k.val;   // ใส่จำนวนที่ C
+                r.getCell(4).value = k.pct;   // ใส่ % ที่ D
+
+                // ตกแต่ง KPI
+                // สีพื้นหลังใส่ที่ Cell 1 (A)
+                r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: k.color } };
+                
+                // ตีเส้นขอบ (ต้องตีเผื่อไปถึงช่อง 4)
+                [1, 3, 4].forEach(col => {
+                    r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    if (col !== 1) r.getCell(col).alignment = { horizontal: 'center' }; // จัดกลางเฉพาะตัวเลข
+                });
+
+                if (k.bold) r.font = { bold: true };
+                currentRow++;
+            });
+
+            // --- ส่วนที่ 3: แปะรูปกราฟ (ด้านขวา KPI) ---
+            const chartElement = document.getElementById('admin-charts-container');
+            if (chartElement) {
+                try {
+                    // ใช้ toPng จาก html-to-image
+                    const { toPng } = await import('html-to-image');
+                    const imgData = await toPng(chartElement, {
+                        quality: 1.0,
+                        pixelRatio: 2,
+                        backgroundColor: '#ffffff'
+                    });
+
+                    const imageId = workbook.addImage({ base64: imgData, extension: 'png' });
+
+                    // แปะที่คอลัมน์ G (7) แถว 3 (ข้างๆ KPI)
+                    worksheet.addImage(imageId, {
+                        tl: { col: 0, row: 9 }, // เริ่ม Col G, Row 3
+                        ext: { width: 850, height: 320 }
+                    });
+                } catch (e) { console.error("Chart Error", e); }
+            }
+
+            // --- ส่วนที่ 4: ตารางรายชื่อ (Main Table) ---
+            // เริ่มที่บรรทัด 12 (เว้นระยะจาก KPI/Graph ลงมา)
+            const tableStartRow = 30;
+            const headerRow = worksheet.getRow(tableStartRow);
+
+            // กำหนด Header
+            headerRow.values = [
+                'ลำดับ', 'วันที่จอง', 'รอบเวลา', 'ชื่อ-นามสกุล', 'ชื่อไลน์ (LINE)', 'เบอร์โทรศัพท์', 'รหัสการจอง', 'สถานะ', 'หมายเหตุ'
+            ];
+
+            // ตกแต่ง Header ตารางรายชื่อ
+            headerRow.eachCell((cell) => {
+                cell.font = { name: 'Sarabun', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF047857' } }; // เขียว Emerald
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+            headerRow.height = 24;
+
+            // วนลูปใส่ข้อมูลรายคน (Explicit Row Loop) -> แก้ปัญหาข้อมูลไม่มา
+            allData.forEach((b, index) => {
+                const rowIndex = tableStartRow + 1 + index; // คำนวณบรรทัดเองเลย ชัวร์สุด
+                const row = worksheet.getRow(rowIndex);
+
+                const statusText = b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
+                    b.status === 'CANCELLED' ? 'ยกเลิก' :
+                        b.status === 'NO_SHOW' ? 'ไม่มาตามนัด' : 'รอรับบริการ';
+
+                // กำหนดสีตัวอักษรสถานะ
+                let statusColor = 'FF000000';
+                if (b.status === 'CHECKED_IN') statusColor = 'FF10B981'; // เขียว
+                else if (b.status === 'CANCELLED') statusColor = 'FFEF4444'; // แดง
+                else if (b.status === 'NO_SHOW') statusColor = 'FF6B7280'; // เทา
+                else if (b.status === 'BOOKED') statusColor = 'FFF59E0B'; // เหลืองเข้ม
+
+                // ใส่ค่าลงเซลล์ทีละช่อง
+                row.getCell(1).value = index + 1;
+                row.getCell(2).value = b.booking_date || b.date;
+                row.getCell(3).value = b.slot_label || b.slot;
+                row.getCell(4).value = b.customer_name || b.name;
+                row.getCell(5).value = b.line_display_name || "-";
+                row.getCell(6).value = formatPhoneForExcel(b.phone); // Format เบอร์
+                row.getCell(7).value = b.booking_code || b.code;
+                row.getCell(8).value = statusText;
+                row.getCell(9).value = b.noshow_reason || "-";
+
+                // ใส่สีสถานะ
+                row.getCell(8).font = { color: { argb: statusColor }, bold: true };
+
+                // ตีเส้นตารางทุกช่อง
+                for (let i = 1; i <= 9; i++) {
+                    const cell = row.getCell(i);
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { vertical: 'middle', horizontal: (i === 1 || i === 2 || i === 6 || i === 7) ? 'center' : 'left' };
+                }
+            });
+
+            // กำหนดความกว้างคอลัมน์
+            worksheet.getColumn(1).width = 6;  // ลำดับ
+            worksheet.getColumn(2).width = 15; // วันที่
+            worksheet.getColumn(3).width = 18; // รอบ
+            worksheet.getColumn(4).width = 25; // ชื่อ
+            worksheet.getColumn(5).width = 22; // ไลน์
+            worksheet.getColumn(6).width = 18; // เบอร์
+            worksheet.getColumn(7).width = 20; // รหัส
+            worksheet.getColumn(8).width = 15; // สถานะ
+            worksheet.getColumn(9).width = 25; // เหตุผล
+
+            // 5. Save File
+            const buffer = await workbook.xlsx.writeBuffer();
+            const fileName = `Report_${viewMode}_${date}.xlsx`;
+            saveAs(new Blob([buffer]), fileName);
 
             Swal.close();
-            XLSX.writeFile(workbook, `Booking_Full_Report_${viewMode}_${date}.xlsx`);
-
-            Toast.fire({
-                icon: 'success',
-                title: `ส่งออกข้อมูลทั้งหมด ${allData.length} รายการสำเร็จ`
-            });
+            Toast.fire({ icon: 'success', title: 'ดาวน์โหลดสำเร็จ' });
 
         } catch (err) {
             Swal.close();
-            Swal.fire("Error", "ไม่สามารถดึงข้อมูลเพื่อส่งออกได้: " + err.message, "error");
+            console.error(err);
+            Swal.fire("Error", "เกิดข้อผิดพลาด: " + err.message, "error");
         }
     };
 
-    // ฟังก์ชันลัด: เพิ่มเสาร์-อาทิตย์ ของเดือนปัจจุบัน
-    // const handleAddWeekendsThisMonth = async () => {
-    //     const now = new Date();
-    //     const year = now.getFullYear();
-    //     const month = now.getMonth(); // 0 = ม.ค.
-
-    //     // หาวันสุดท้ายของเดือนนี้
-    //     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    //     let datesToAdd = [];
-
-    //     // วนลูปตั้งแต่วันที่ 1 ถึงวันสุดท้าย
-    //     for (let d = 1; d <= daysInMonth; d++) {
-    //         const current = new Date(year, month, d);
-    //         const dayOfWeek = current.getDay(); // 0=อาทิตย์, 6=เสาร์
-
-    //         // ถ้าเป็น เสาร์ หรือ อาทิตย์
-    //         if (dayOfWeek === 0 || dayOfWeek === 6) {
-    //             // แปลงเป็น YYYY-MM-DD (ระวังเรื่อง timezone, ทำแบบ string ชัวร์สุด)
-    //             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    //             datesToAdd.push(dateStr);
-    //         }
-    //     }
-
-    //     // กรองเอาเฉพาะวันที่ "ยังไม่มี" ในระบบ
-    //     const existingDates = manageDates.map(item => item.date); // ดึงเฉพาะวันที่ที่มีอยู่แล้ว
-    //     const uniqueDates = datesToAdd.filter(d => !existingDates.includes(d));
-
-    //     if (uniqueDates.length === 0) {
-    //         Swal.fire("ครบแล้ว", "เดือนนี้มีวันเสาร์-อาทิตย์ ครบหมดแล้ว", "info");
-    //         return;
-    //     }
-
-    //     // ถามยืนยัน
-    //     const confirm = await Swal.fire({
-    //         title: `เพิ่ม ${uniqueDates.length} วัน?`,
-    //         text: `ระบบจะเพิ่มวันเสาร์-อาทิตย์ ที่เหลือของเดือนนี้ให้ทั้งหมด`,
-    //         icon: 'question',
-    //         showCancelButton: true,
-    //         confirmButtonText: 'ยืนยัน',
-    //         confirmButtonColor: '#059669',
-    //         cancelButtonText: 'ยกเลิก'
-    //     });
-
-    //     if (!confirm.isConfirmed) return;
-
-    //     // เริ่มบันทึก
-    //     setAddingDate(true);
-    //     Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
-
-    //     try {
-    //         let successCount = 0;
-    //         // วนลูปยิง API ทีละวัน
-    //         for (const d of uniqueDates) {
-    //             const res = await addOpenDate(d);
-    //             if (res.ok) successCount++;
-    //         }
-
-    //         Swal.close();
-    //         Toast.fire({ icon: 'success', title: `เพิ่มเรียบร้อย ${successCount} วัน` });
-
-    //         // อัปเดตหน้าจอทันที
-    //         const newItems = uniqueDates.map(d => ({ date: d, status: "OPEN" }));
-    //         setManageDates(prev => [...prev, ...newItems].sort((a, b) => a.date.localeCompare(b.date)));
-
-    //     } catch (err) {
-    //         Swal.fire("Error", err.message, "error");
-    //     } finally {
-    //         setAddingDate(false);
-    //     }
-    // };
 
     // ฟังก์ชันลัด: เพิ่มเสาร์-อาทิตย์ (อิงตามเดือนของวันที่ที่เลือก)
     const handleAddWeekendsByDate = async () => {
@@ -2235,7 +2409,7 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div id="admin-charts-container" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                     <div className="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                         <h3 className="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
                                             <FiBarChart2 />
