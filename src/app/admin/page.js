@@ -994,13 +994,13 @@ export default function AdminPage() {
     //         setScanStatus("idle");
     //     }
     // };
+    
+
     const startScanner = async () => {
         if (!document.getElementById("reader")) return;
 
-        // เคลียร์ของเก่าก่อนเริ่มใหม่
         if (scannerRef.current) await stopScanner();
 
-        // 1. สร้าง Instance
         const html5QrCode = new Html5Qrcode("reader");
         scannerRef.current = html5QrCode;
 
@@ -1008,54 +1008,45 @@ export default function AdminPage() {
         setScanErrorMsg("");
 
         try {
-            // 🔥 สูตรลับ: Constraints สำหรับกล้องมือถือ (Pro Mode)
-            const videoConstraints = {
-                facingMode: "environment", // กล้องหลัง
-                focusMode: "continuous",   // 🎯 สั่งโฟกัสตลอดเวลา (สำคัญมาก)
-                width: { min: 640, ideal: 1280, max: 1920 }, // ขอความละเอียดสูงหน่อยภาพจะได้ชัด
-                height: { min: 480, ideal: 720, max: 1080 },
-                advanced: [
-                    { focusMode: "continuous" },      // ย้ำโฟกัสอีกรอบ
-                    { exposureMode: "continuous" },   // ☀️ ปรับแสงออโต้ (สู้แสงสะท้อน)
-                    { whiteBalanceMode: "continuous" }// 🎨 สมดุลแสงขาว
-                ]
-            };
-
-            // 2. สั่ง Start
+            // 1. เปิดกล้อง (ส่ง config แค่จำเป็น)
             await html5QrCode.start(
-                videoConstraints,
+                { facingMode: "environment" },
                 {
-                    fps: 25, // 🚀 เร่งความเร็วเป็น 25 เฟรม/วิ (สแกนไวขึ้น 2.5 เท่า)
+                    fps: 25,
                     qrbox: { width: 250, height: 250 },
                     aspectRatio: 1.0,
-                    disableFlip: false, // ห้ามกลับด้านภาพ (ช่วยให้อ่าน QR ง่ายขึ้น)
+                    disableFlip: false
                 },
-                (decodedText) => {
-                    // เมื่อสแกนเจอ
-                    handleScanSuccess(decodedText);
-                },
-                (errorMessage) => {
-                    // ไม่ต้องทำอะไร ปล่อยผ่าน
-                }
+                (decodedText) => handleScanSuccess(decodedText),
+                () => {}
             );
+
+            // 2. อัปเกรด Pro Mode (แก้ไขจุดที่ Error)
+            try {
+                setTimeout(async () => {
+                    if (html5QrCode.getState() === 2) { // 2 = SCANNING
+                        // 🔥 แก้ไข: ใช้ applyVideoConstraints ตรงๆ ไม่ต้อง getRunningTrack
+                        await html5QrCode.applyVideoConstraints({
+                            focusMode: "continuous",
+                            advanced: [
+                                { focusMode: "continuous" },
+                                { exposureMode: "continuous" },
+                                { whiteBalanceMode: "continuous" }
+                            ]
+                        });
+                        console.log("Pro mode enabled");
+                    }
+                }, 500);
+            } catch (err) {
+                console.log("Pro mode not supported, using normal mode.");
+            }
+
             setScanStatus("active");
 
         } catch (err) {
-            console.error("Advanced Camera Error:", err);
-
-            // 🚑 Fallback: ถ้าเครื่องไหนไม่รองรับโหมด Pro ให้ถอยกลับมาใช้โหมดธรรมดา
-            try {
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: 250 },
-                    (decodedText) => handleScanSuccess(decodedText),
-                    () => { }
-                );
-                setScanStatus("active");
-            } catch (fallbackErr) {
-                setScanStatus("error");
-                setScanErrorMsg("ไม่สามารถเปิดกล้องหลังได้ (กรุณาอนุญาตให้ใช้กล้อง)");
-            }
+            console.error("Camera Error:", err);
+            setScanStatus("error");
+            setScanErrorMsg("ไม่สามารถเปิดกล้องได้ (กรุณาอนุญาตสิทธิ์การเข้าถึง)");
         }
     };
 
