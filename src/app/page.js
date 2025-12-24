@@ -327,7 +327,8 @@ export default function Home() {
         phone: cleanPhone, // ส่งเบอร์ที่คลีนแล้วไป
         lineUserId: lineUserId || "NO_LIFF",
         // ใช้เครื่องหมาย ? เพื่อป้องกัน error กรณีที่ pictureUrl ยังโหลดไม่เสร็จ
-        line_picture_url: userProfile?.pictureUrl || null
+        line_picture_url: userProfile?.pictureUrl || null,
+        lineDisplayName: userProfile?.displayName || lineDisplayName || null
       });
 
       if (!res.ok) throw new Error(res.message);

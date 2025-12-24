@@ -110,7 +110,7 @@ export async function GET(request) {
                                             layout: "vertical",
                                             margin: "lg",
                                             contents: [
-                                                { type: "text", text: "ทางเราขอรบกวนสอบถามสาเหตุที่ไม่สามารถเข้ารับบริการได้ เพื่อนำข้อมูลไปปรับปรุงระบบครับ", wrap: true, size: "xs", color: "#9CA3AF", align: "center" }
+                                                { type: "text", text: "ทางเราขอรบกวนสอบถามเหตุผลที่ไม่สามารถเข้ารับบริการได้ เพื่อนำข้อมูลไปปรับปรุงระบบครับ", wrap: true, size: "xs", color: "#9CA3AF", align: "center" }
                                             ]
                                         }
                                     ]
@@ -124,7 +124,7 @@ export async function GET(request) {
                             contents: [
                                 {
                                     type: "button",
-                                    action: { type: "uri", label: "ระบุสาเหตุ", uri: feedbackUrl }, // ลิงก์ไปหน้า Feedback
+                                    action: { type: "uri", label: "ระบุเหตุผล", uri: feedbackUrl }, // ลิงก์ไปหน้า Feedback
                                     style: "primary",
                                     color: "#EF4444" // สีปุ่มแดง ให้เข้ากับ Header
                                 }

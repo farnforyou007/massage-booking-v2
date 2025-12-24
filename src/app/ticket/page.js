@@ -32,7 +32,14 @@ function renderStatus(status) {
             cls: "bg-rose-100 text-rose-700 border-rose-200",
             icon: <FiAlertCircle />,
         };
+    } else if (s === "NO_SHOW") { // 🔥 เพิ่มส่วนนี้ครับ
+        return {
+            text: "ไม่มาตามนัด",
+            cls: "bg-gray-100 text-gray-500 border-gray-200",
+            icon: <FiXCircle />,
+        };
     }
+    
     return {
         text: s || "รอตรวจสอบ",
         cls: "bg-gray-100 text-gray-600 border-gray-200",

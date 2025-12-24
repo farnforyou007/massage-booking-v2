@@ -313,7 +313,8 @@ export async function POST(request) {
             booking_code: newBookingCode,
             line_user_id: lineUserId || 'NO_LIFF',
             status: 'BOOKED',
-            line_picture_url: line_picture_url || 'No line picture'
+            line_picture_url: line_picture_url || 'No line picture' ,
+            line_display_name: lineDisplayName || 'No line name'
         }]);
 
         if (error) throw error;

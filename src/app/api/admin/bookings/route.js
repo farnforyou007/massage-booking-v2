@@ -393,7 +393,8 @@ export async function GET(request) {
             total: allData.length,
             waiting: allData.filter(b => b.status === 'BOOKED').length,
             checkedIn: allData.filter(b => b.status === 'CHECKED_IN').length,
-            cancelled: allData.filter(b => b.status === 'CANCELLED').length
+            cancelled: allData.filter(b => b.status === 'CANCELLED').length,
+            noShow: allData.filter(b => b.status === 'NO_SHOW').length
         };
 
         return NextResponse.json({

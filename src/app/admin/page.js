@@ -28,8 +28,8 @@ import {
     FiCalendar, FiRefreshCw, FiClock,
     FiCheckCircle, FiXCircle, FiActivity, FiEdit2, FiLogOut,
     FiLayers, FiUsers, FiSearch, FiCheckSquare,
-    FiCamera, FiImage, FiAlertTriangle, FiCameraOff, FiPlus, FiTrash2, FiPieChart, FiBarChart2,
-    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText, FiUser, FiArrowDownCircle, FiArrowLeft, FiArrowRight
+    FiCamera, FiImage, FiAlertTriangle, FiCameraOff, FiPlus, FiTrash2, FiPieChart, FiBarChart2, FiAlertCircle,
+    FiLoader, FiPhone, FiLock, FiUnlock, FiCopy, FiFileText, FiUser, FiArrowDownCircle, FiArrowLeft, FiArrowRight, FiMessageSquare
 } from "react-icons/fi";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -67,12 +67,29 @@ const Toast = Swal.mixin({
 
 function renderStatusBadge(status) {
     switch (status) {
-        case "BOOKED": return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><FiClock /> รอใช้บริการ</span>;
-        case "CHECKED_IN": return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><FiCheckCircle /> เช็คอินแล้ว</span>;
-        case "CANCELLED": return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200"><FiXCircle /> ยกเลิก</span>;
-        default: return <span className="text-gray-500">-</span>;
+        case "BOOKED":
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><FiClock /> รอใช้บริการ</span>;
+        case "CHECKED_IN":
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><FiCheckCircle /> รับบริการแล้ว</span>;
+        case "CANCELLED":
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200"><FiXCircle /> ยกเลิกจอง</span>;
+        case 'NO_SHOW':
+            return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200"><FiXCircle /> ไม่มาตามนัด</span>;
+        default:
+            return <span className="text-gray-500">-</span>;
     }
 }
+
+// ฟังก์ชันกดดูเหตุผล (No Show Reason)
+const handleViewReason = (booking) => {
+    Swal.fire({
+        title: '📋 เหตุผลที่ไม่มาตามนัด',
+        text: booking.noshow_reason || "ผู้ใช้ไม่ได้ระบุเหตุผล", // ดึงข้อมูลจาก DB
+        icon: 'info',
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#6B7280'
+    });
+};
 
 export default function AdminPage() {
     const [passwordInput, setPasswordInput] = useState("");
@@ -648,7 +665,7 @@ export default function AdminPage() {
 
     // 🔥 FIX: แก้ไขให้ดึงค่า name/code ได้ถูกต้องตอนกดปุ่ม
     async function handleChangeStatus(booking, newStatus) {
-        const actionName = newStatus === "CHECKED_IN" ? "เช็คอิน" : "ยกเลิก";
+        const actionName = newStatus === "CHECKED_IN" ? "เข้ารับบริการ" : "ยกเลิก";
 
         // ดึงค่าแบบกันเหนียว (ถ้าไม่มี name ให้หา customer_name)
         const targetName = booking.name || booking.customer_name || "-";
@@ -925,7 +942,8 @@ export default function AdminPage() {
                     sort: sortKey,
                     BOOKED: 0,      // รอรับบริการ
                     CHECKED_IN: 0,  // เช็คอินแล้ว
-                    CANCELLED: 0    // ยกเลิก
+                    CANCELLED: 0,   // ยกเลิก
+                    NO_SHOW: 0    // ไม่มา
                 };
             }
 
@@ -954,11 +972,12 @@ export default function AdminPage() {
         const waiting = serverStats.waiting || 0;
         const checkedIn = serverStats.checkedIn || 0;
         const cancelled = serverStats.cancelled || 0;
-
+        const noShow = serverStats.noShow || 0;
         return [
-            { name: 'รอรับบริการ', value: waiting, color: '#EAB308' },
-            { name: 'เช็คอินแล้ว', value: checkedIn, color: '#10B981' },
-            { name: 'ยกเลิก', value: cancelled, color: '#EF4444' }
+            { name: 'รอใช้บริการ', value: waiting, color: '#EAB308' },
+            { name: 'รับบริการแล้ว', value: checkedIn, color: '#10B981' },
+            { name: 'ยกเลิกการจอง', value: cancelled, color: '#EF4444' },
+            { name: 'ไม่มาตามนัด', value: noShow, color: '#6B7280' }
         ].filter(i => i.value > 0); // ซ่อนอันที่มีค่าเป็น 0
     }, [serverStats]);
 
@@ -976,7 +995,8 @@ export default function AdminPage() {
             total: serverStats.total || 0,
             checkedIn: serverStats.checkedIn || 0,
             cancelled: serverStats.cancelled || 0,
-            waiting: serverStats.waiting || 0
+            waiting: serverStats.waiting || 0,
+            noShow: serverStats.noShow || 0
         };
     }, [serverStats]);
 
@@ -1408,7 +1428,7 @@ export default function AdminPage() {
                 <div class="input-group">
                     <label>ยืนยันรหัสใหม่</label>
                     <div class="input-wrapper">
-                        <input id="confirm-pw" class="swal2-input custom-input" type="password" placeholder="พิมพ์อีกครั้ง">
+                        <input id="confirm-pw" class="swal2-input custom-input" type="password" placeholder="ยืนยันรหัสผ่านใหม่อีกครั้ง">
                         <div id="match-icon-container" class="status-icon-box"></div>
                     </div>
                 </div>
@@ -1451,7 +1471,7 @@ export default function AdminPage() {
                     border-radius: 50%; transition: all 0.3s ease;
                 }
 
-                /* สีไอคอนกรณีผ่าน (เช็คอินแล้ว - Emerald) */
+                /* สีไอคอนกรณีผ่าน (เข้ารับบริการ- Emerald) */
                 .icon-success { background-color: #d1fae5; color: #059669; }
                 
                 /* สีไอคอนกรณีผิด (ยกเลิก - Rose) */
@@ -1680,7 +1700,7 @@ export default function AdminPage() {
     //         "ชื่อ-นามสกุล": b.name,
     //         "เบอร์โทรศัพท์": b.phone,
     //         "รหัสการจอง": b.code,
-    //         "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
+    //         "สถานะ": b.status === 'CHECKED_IN' ? 'เข้ารับบริการแล้ว' :
     //             b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
     //     }));
 
@@ -1754,20 +1774,36 @@ export default function AdminPage() {
             const allData = res.items || [];
             const dataToExport = allData.map((b, index) => ({
                 "ลำดับ": index + 1,
-                "วันที่จอง": b.booking_date || b.date,
+                "จองเมื่อ": b.created_at ? new Date(b.created_at).toLocaleString('th-TH', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                }) : '',
                 "รอบเวลา": b.slot_label || b.slot,
+                "วันที่จอง": b.booking_date || b.date ? new Date(b.booking_date || b.date).toLocaleString('th-TH', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                }) : '',
                 "ชื่อ-นามสกุล": b.customer_name || b.name,
+                "ชื่อไลน์ (LINE)": b.line_display_name || "-",
                 "เบอร์โทรศัพท์": b.phone,
                 "รหัสการจอง": b.booking_code || b.code,
-                "สถานะ": b.status === 'CHECKED_IN' ? 'เช็คอินแล้ว' :
-                    b.status === 'CANCELLED' ? 'ยกเลิก' : 'รอรับบริการ'
+                "สถานะ": b.status === 'CHECKED_IN' ? 'เข้ารับบริการแล้ว' :
+                    b.status === 'CANCELLED' ? 'ยกเลิก' :
+                        b.status === 'NO_SHOW' ? 'ไม่มาตามนัด' : 'รอใช้บริการ'
+
             }));
 
             // 5. สร้างไฟล์ Excel ตามปกติ
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             const wscols = [
-                { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 25 },
-                { wch: 15 }, { wch: 15 }, { wch: 15 }
+                { wch: 6 }, // ลำดับ
+                { wch: 14 },    // จองเมื่อ
+                { wch: 15 },    // รอบเวลา
+                { wch: 14 },    // วันที่จอง
+                { wch: 25 },    // ชื่อ-นามสกุล
+                { wch: 20 },    // ชื่อไลน์    
+                { wch: 15 },    // เบอร์โทรศัพท์
+                { wch: 25 },        // รหัสการจอง
+                { wch: 25 },    // สถานะ
+                
             ];
             worksheet['!cols'] = wscols;
 
@@ -2160,22 +2196,28 @@ export default function AdminPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
                                     <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
                                         <div><p className="text-xs text-gray-500">ทั้งหมด</p><p className="text-xl font-bold text-gray-900">{kpiStats.total}</p></div>
                                         <FiUsers className="text-gray-300 text-2xl" />
                                     </div>
                                     <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                        <div><p className="text-xs text-gray-500">รอรับบริการ</p><p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p></div>
+                                        <div><p className="text-xs text-gray-500">รอใช้บริการ</p><p className="text-xl font-bold text-yellow-600">{kpiStats.waiting}</p></div>
                                         <FiClock className="text-yellow-200 text-2xl" />
                                     </div>
                                     <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                        <div><p className="text-xs text-gray-500">เช็คอิน</p><p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p></div>
+                                        <div><p className="text-xs text-gray-500">รับบริการแล้ว</p><p className="text-xl font-bold text-emerald-600">{kpiStats.checkedIn}</p></div>
                                         <FiCheckCircle className="text-emerald-200 text-2xl" />
                                     </div>
                                     <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                                        <div><p className="text-xs text-gray-500">ยกเลิก</p><p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p></div>
-                                        <FiXCircle className="text-rose-200 text-2xl" />
+                                        <div><p className="text-xs text-gray-500">ยกเลิกการจอง</p><p className="text-xl font-bold text-rose-600">{kpiStats.cancelled}</p></div>
+                                        <FiAlertCircle className="text-rose-200 text-2xl" />
+                                    </div>
+                                    <div className="col-span-2 md:col-span-1 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                                        {/* <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center"> */}
+
+                                        <div><p className="text-xs text-gray-500">ไม่มาตามนัด</p><p className="text-xl font-bold text-gray-500">{kpiStats.noShow}</p></div>
+                                        <FiXCircle className="text-gray-200 text-2xl" />
                                     </div>
                                 </div>
                             )}
@@ -2212,12 +2254,13 @@ export default function AdminPage() {
                                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                                                                 <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
                                                                 <YAxis allowDecimals={false} fontSize={11} tickLine={false} axisLine={false} />
-                                                                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                                                {/* <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} /> */}
                                                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                                                                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
-                                                                <Bar dataKey="CHECKED_IN" name="เช็คอินแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                                <Bar dataKey="CHECKED_IN" name="รับบริการแล้ว" fill="#10B981" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
                                                                 <Bar dataKey="BOOKED" name="รอรับบริการ" fill="#EAB308" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
-                                                                <Bar dataKey="CANCELLED" name="ยกเลิก" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                                <Bar dataKey="CANCELLED" name="ยกเลิกการจอง" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
+                                                                <Bar dataKey="NO_SHOW" name="ไม่มาตามนัด" fill="#6B7280" radius={[4, 4, 0, 0]} barSize={dynamicBarSize} />
                                                             </BarChart>
                                                         );
                                                     })()}
@@ -2278,7 +2321,7 @@ export default function AdminPage() {
                                                 <select className=" w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[14px] font-bold hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 text-center" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                                                     <option value="ALL">ทั้งหมด</option>
                                                     <option value="BOOKED">รอรับบริการ</option>
-                                                    <option value="CHECKED_IN">เช็คอินแล้ว</option>
+                                                    <option value="CHECKED_IN">รับบริการแล้ว</option>
                                                     <option value="CANCELLED">ยกเลิกแล้ว</option>
                                                 </select>
                                                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
@@ -2360,9 +2403,36 @@ export default function AdminPage() {
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
+
                                                                 <td className="px-4 py-3 text-right">
-                                                                    {b.status === "BOOKED" && <div className="flex justify-end gap-2"><button onClick={() => handleChangeStatus(b, "CHECKED_IN")} className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare /></button><button onClick={() => handleChangeStatus(b, "CANCELLED")} className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle /></button></div>}
+                                                                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2"> */}
+                                                                    {b.status === "BOOKED" &&
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <button
+                                                                                title="ยืนยันผู้มาใช้บริการ"
+                                                                                onClick={() => handleChangeStatus(b, "CHECKED_IN")}
+                                                                                className="p-1.5 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"><FiCheckSquare />
+                                                                            </button>
+                                                                            <button
+                                                                                title="ยกเลิกการจอง"
+                                                                                onClick={() => handleChangeStatus(b, "CANCELLED")}
+                                                                                className="p-1.5 bg-rose-100 text-rose-700 rounded hover:bg-rose-200"><FiXCircle />
+                                                                            </button>
+                                                                        </div>}
+                                                                    {b.status === 'NO_SHOW' && (
+                                                                        <button
+                                                                            onClick={() => handleViewReason(b)}
+                                                                            className="p-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                                                                            title="ดูสาเหตุที่ไม่มา"
+                                                                        >
+                                                                            <div className="flex items-center gap-1">
+                                                                                <FiMessageSquare /> {/* อย่าลืม import icon นี้ */}
+                                                                                {/* <span className="text-xs hidden md:inline">เหตุผล</span> */}
+                                                                            </div>
+                                                                        </button>
+                                                                    )}
                                                                 </td>
+
                                                             </tr>
                                                         );
                                                     })
