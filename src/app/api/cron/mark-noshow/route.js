@@ -11,7 +11,7 @@ export async function GET(request) {
     const key = searchParams.get('key');
 
     // ⚠️ ให้ตั้งรหัสลับในใจขึ้นมา 1 ตัว เช่น "mySecretPass1234" เอาไว้ใส่ใน Apps Script
-    if (key !== "mySecretPass1234") {
+    if (key !== "6fecc57824e6f3b0") {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
