@@ -421,7 +421,9 @@ export default function MyHistoryPage() {
                             {/* แถบสีสถานะด้านซ้าย */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1.5 
                                 ${booking.status === 'BOOKED' ? 'bg-yellow-400' :
-                                    booking.status === 'CHECKED_IN' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                                    booking.status === 'CHECKED_IN' ? 'bg-emerald-500' : 
+                                    booking.status === 'NO_SHOW' ?  'bg-gray-500' : 'bg-rose-500'}`}>
+                                    
                             </div>
 
                             <div className="flex justify-between items-start mb-3 pl-2">
@@ -439,9 +441,11 @@ export default function MyHistoryPage() {
                                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 
                                     ${booking.status === 'BOOKED' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                                         booking.status === 'CHECKED_IN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                        booking.status === 'NO_SHOW' ? 'bg-gray-50 text-gray-700 border-gray-200' :
                                             'bg-rose-50 text-rose-700 border-rose-200'}`}>
                                     {booking.status === 'BOOKED' ? 'รอรับบริการ' :
                                         booking.status === 'CHECKED_IN' ? <><FiCheckCircle /> สำเร็จ</> :
+                                        booking.status === 'NO_SHOW' ? <><FiXCircle /> ไม่มาตามนัด</> :
                                             <><FiXCircle /> ยกเลิก</>}
                                 </span>
                             </div>

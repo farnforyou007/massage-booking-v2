@@ -119,6 +119,10 @@ export default function AdminPage() {
     const [scanData, setScanData] = useState(null);
     const [manualCode, setManualCode] = useState("");
     const scannerRef = useRef(null);
+    const [autoCheckIn, setAutoCheckIn] = useState(true);
+    // 🔥 2. เพิ่ม Ref เพื่อกันการสแกนรัวๆ (Scan Lock)
+    const isProcessingScan = useRef(false);
+
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
     const [showDateManager, setShowDateManager] = useState(false)
@@ -817,78 +821,6 @@ export default function AdminPage() {
         }
     };
 
-    // const filteredBookings = useMemo(() => {
-    //     return bookings.filter(b => {
-    //         const searchLower = searchTerm.toLowerCase();
-    //         const targetName = (b.name || b.customer_name || "").toLowerCase();
-    //         const targetCode = (b.code || b.booking_code || "").toLowerCase();
-
-    //         const matchSearch = targetName.includes(searchLower) ||
-    //             (b.phone || "").includes(searchTerm) ||
-    //             targetCode.includes(searchLower);
-    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
-    //         return matchSearch && matchStatus;
-    //     });
-    // }, [bookings, searchTerm, filterStatus]);
-
-    // const filteredBookings = useMemo(() => {
-    //     return bookings.filter(b => {
-    //         const searchLower = searchTerm.trim().toLowerCase();
-
-    //         // ดึงค่าเป้าหมายมาตรวจสอบ (ใช้ข้อมูลจาก bookings ที่ Map มาแล้ว)
-    //         const targetName = (b.name || "").toLowerCase();
-    //         const targetCode = (b.code || "").toLowerCase();
-    //         const targetPhone = (b.phone || "");
-
-    //         // กรองด้วยคำค้นหา (ชื่อ, เบอร์, หรือรหัสจอง)
-    //         const matchSearch = !searchLower ||
-    //             targetName.includes(searchLower) ||
-    //             targetPhone.includes(searchLower) ||
-    //             targetCode.includes(searchLower);
-
-    //         // กรองด้วยสถานะ (ALL, BOOKED, CHECKED_IN, CANCELLED)
-    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
-
-    //         return matchSearch && matchStatus;
-    //     });
-    // }, [bookings, searchTerm, filterStatus]);
-
-    // const filteredBookings = useMemo(() => {
-    //     return bookings.filter(b => {
-    //         const searchLower = searchTerm.trim().toLowerCase();
-
-    //         // ถ้าไม่มีคำค้นหา ให้กรองตามสถานะอย่างเดียว
-    //         if (!searchLower) {
-    //             return filterStatus === "ALL" || b.status === filterStatus;
-    //         }
-
-    //         // รวมฟิลด์ชื่อ รหัสจอง และเบอร์โทรจากทุกความเป็นไปได้
-    //         const nameField = (b.customer_name || b.name || "").toLowerCase();
-    //         const codeField = (b.booking_code || b.code || "").toLowerCase();
-    //         const phoneField = (b.phone || "");
-
-    //         const isMatch = nameField.includes(searchLower) ||
-    //             codeField.includes(searchLower) ||
-    //             phoneField.includes(searchLower);
-
-    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
-
-    //         return isMatch && matchStatus;
-    //     });
-    // }, [bookings, searchTerm, filterStatus]);
-
-    // const filteredBookings = useMemo(() => {
-    //     // กรองข้อมูลจาก bookings (ที่ Server ส่งมาให้แล้ว)
-    //     return bookings.filter(b => {
-    //         // เราตัดการเช็ค SearchTerm ออก เพราะ API กรองมาให้แล้ว หรือถ้าจะคงไว้เพื่อความชัวร์ก็ได้ แต่ไม่จำเป็น
-
-    //         // ✅ เหลือแค่เช็คสถานะ
-    //         const matchStatus = filterStatus === "ALL" || b.status === filterStatus;
-
-    //         return matchStatus;
-    //     });
-    // }, [bookings, filterStatus]); // dependency เหลือแค่ 2 ตัวนี้    
-
     const filteredBookings = useMemo(() => {
         return bookings.filter(b => {
             // 1. กรองสถานะ (ทำงานสัมพันธ์กับ Dropdown)
@@ -1091,31 +1023,250 @@ export default function AdminPage() {
         }
     };
 
+    // const handleScanSuccess = async (decodedText) => {
+    //     let finalCode = decodedText;
+    //     try { const url = new URL(decodedText); const c = url.searchParams.get("code"); if (c) finalCode = c; } catch (e) { }
+    //     setCameraEnabled(false);
+    //     Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    //     try {
+    //         const res = await getBookingByCode(finalCode);
+    //         Swal.close();
+    //         if (res.ok && res.booking) {
+    //             const b = res.booking;
+    //             // Map ข้อมูลสำหรับหน้า Scan ให้ตรงกัน
+    //             setScanData({
+    //                 ...b,
+    //                 name: b.customer_name || b.name,
+    //                 code: b.booking_code || b.code,
+    //                 slot: b.slot_label || b.slot,
+    //                 date: b.booking_date || b.date,
+    //                 line_picture_url: b.line_picture_url || null
+    //             });
+    //         }
+
+    //         else Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
+    //     } catch (err) { Swal.fire("Error", err.message, "error"); }
+    // };
+    // console.log("Scan Data Result:", scanData);
+
+
+    // 🔥 ปรับแสกนให้สามารถสลับโหมดออโต้ กับยืนยันเอง
+    // const handleScanSuccess = async (decodedText) => {
+    //     // 🔒 ถ้ากำลังประมวลผลอยู่ (Scan Lock) ให้ข้ามไปเลย (กันสแกนซ้ำรัวๆ)
+    //     if (isProcessingScan.current) return;
+    //     isProcessingScan.current = true;
+
+    //     let finalCode = decodedText;
+    //     try { const url = new URL(decodedText); const c = url.searchParams.get("code"); if (c) finalCode = c; } catch (e) { }
+
+    //     // --- กรณี: โหมด Manual (แบบเดิม) ---
+    //     if (!autoCheckIn) {
+    //         setCameraEnabled(false); // ปิดกล้อง
+    //         Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    //         try {
+    //             const res = await getBookingByCode(finalCode);
+    //             Swal.close();
+    //             if (res.ok && res.booking) {
+    //                 const b = res.booking;
+    //                 setScanData({
+    //                     ...b,
+    //                     name: b.customer_name || b.name,
+    //                     code: b.booking_code || b.code,
+    //                     slot: b.slot_label || b.slot,
+    //                     date: b.booking_date || b.date,
+    //                     line_picture_url: b.line_picture_url || null
+    //                 });
+    //             } else {
+    //                 Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
+    //             }
+    //         } catch (err) { Swal.fire("Error", err.message, "error"); }
+
+    //         isProcessingScan.current = false; // ปลดล็อกทันที
+    //         return;
+    //     }
+
+    //     // --- 🚀 กรณี: โหมด Auto Check-in (Kiosk) ---
+    //     try {
+    //         // ไม่ต้องปิดกล้อง! แต่โชว์ Loading เล็กน้อยที่มุมจอก็ได้ หรือไม่โชว์ก็ได้
+
+    //         const res = await getBookingByCode(finalCode);
+
+    //         if (res.ok && res.booking) {
+    //             const b = res.booking;
+
+    //             if (b.status === 'BOOKED') {
+    //                 // ✅ 1. สั่งเช็คอินทันที
+    //                 await adminUpdateBookingStatus(b.booking_code, "CHECKED_IN", authToken);
+
+    //                 // 🔊 2. เล่นเสียงติ๊ด (ถ้ามีไฟล์เสียง)
+    //                 const audio = new Audio('/alert.mp3');
+    //                 audio.play().catch(() => { });
+
+    //                 // ✨ 3. แสดงผล Success สวยๆ (2 วินาทีแล้วหายเอง)
+    //                 await Swal.fire({
+    //                     icon: 'success',
+    //                     title: 'เช็คอินสำเร็จ!',
+    //                     html: `
+    //                         <div class="flex flex-col items-center">
+    //                             <img src="${b.line_picture_url || '/user.png'}" style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover;">
+    //                             <div class="text-xl font-bold text-emerald-700">คุณ ${b.customer_name}</div>
+    //                             <div class="text-sm text-gray-500 mt-1">${b.slot_label}</div>
+    //                         </div>
+    //                     `,
+    //                     timer: 2500, // โชว์ค้างไว้ 2.5 วินาที
+    //                     showConfirmButton: false,
+    //                     backdrop: `rgba(0,0,0,0.5)`
+    //                 });
+
+    //                 // 🔄 4. อัปเดตข้อมูลหลังบ้านเงียบๆ
+    //                 reloadData('none');
+
+    //             } else if (b.status === 'CHECKED_IN') {
+    //                 // กรณีเช็คอินไปแล้ว
+    //                 await Swal.fire({ icon: 'info', title: 'เช็คอินไปแล้ว', text: `คุณ ${b.customer_name} ลงทะเบียนเรียบร้อยแล้วครับ`, timer: 2000, showConfirmButton: false });
+    //             } else {
+    //                 // กรณี Cancel หรืออื่นๆ
+    //                 await Swal.fire({ icon: 'error', title: 'ทำรายการไม่ได้', text: `สถานะปัจจุบัน: ${b.status}`, timer: 2000, showConfirmButton: false });
+    //             }
+    //         } else {
+    //             await Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูล', text: finalCode, timer: 1500, showConfirmButton: false });
+    //         }
+
+    //     } catch (err) {
+    //         console.error(err);
+    //     } finally {
+    //         // 🔓 ปลดล็อก: เว้นระยะ 1 วินาทีหลังจาก Swal ปิด เพื่อกันคนเดิมสแกนซ้ำทันที
+    //         setTimeout(() => {
+    //             isProcessingScan.current = false;
+    //         }, 1000);
+    //     }
+    // };
+
     const handleScanSuccess = async (decodedText) => {
+        // 🔒 Scan Lock: กันสแกนซ้ำรัวๆ
+        if (isProcessingScan.current) return;
+        isProcessingScan.current = true;
+
         let finalCode = decodedText;
         try { const url = new URL(decodedText); const c = url.searchParams.get("code"); if (c) finalCode = c; } catch (e) { }
-        setCameraEnabled(false);
-        Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+        // ------------------------------------------
+        // 1. โหมด Manual (แบบเดิม: ต้องกดเช็คอินเอง)
+        // ------------------------------------------
+        if (!autoCheckIn) {
+            setCameraEnabled(false);
+            Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            try {
+                const res = await getBookingByCode(finalCode);
+                Swal.close();
+                if (res.ok && res.booking) {
+                    const b = res.booking;
+                    setScanData({
+                        ...b,
+                        name: b.customer_name || b.name, // กันเหนียว
+                        code: b.booking_code || b.code,
+                        slot: b.slot_label || b.slot,
+                        date: b.booking_date || b.date,
+                        line_picture_url: b.line_picture_url || null
+                    });
+                } else {
+                    Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
+                }
+            } catch (err) { Swal.fire("Error", err.message, "error"); }
+
+            setTimeout(() => { isProcessingScan.current = false; }, 500);
+            return;
+        }
+
+        // ------------------------------------------
+        // 2. โหมด Auto Check-in (อัตโนมัติ)
+        // ------------------------------------------
         try {
+            // ดึงข้อมูลการจองก่อน
             const res = await getBookingByCode(finalCode);
-            Swal.close();
+
             if (res.ok && res.booking) {
                 const b = res.booking;
-                // Map ข้อมูลสำหรับหน้า Scan ให้ตรงกัน
-                setScanData({
-                    ...b,
-                    name: b.customer_name || b.name,
-                    code: b.booking_code || b.code,
-                    slot: b.slot_label || b.slot,
-                    date: b.booking_date || b.date,
-                    line_picture_url: b.line_picture_url || null
-                });
+
+                // ตรวจสอบชื่อตัวแปรให้ชัวร์ (ใช้ || กันพลาด)
+                const customerName = b.customer_name || b.name || "ลูกค้า";
+                const slotLabel = b.slot_label || b.slot || "-";
+                const bookingCode = b.booking_code || b.code;
+
+                // กรณี: สถานะเป็น BOOKED -> สั่งเช็คอิน
+                if (b.status === 'BOOKED') {
+
+                    // 🔥 แก้ไขจุดสำคัญ: รอให้ Update เสร็จจริงก่อน ค่อยแจ้งเตือน
+                    const updateRes = await adminUpdateBookingStatus(bookingCode, "CHECKED_IN", authToken);
+
+                    if (updateRes.ok) {
+                        // 1. เล่นเสียง
+                        const audio = new Audio('/alert.mp3');
+                        audio.play().catch(() => { });
+
+                        // 2. แสดงผลสำเร็จ (ชื่อไม่ Undefined แล้ว)
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'เช็คอินสำเร็จ!',
+                            html: `
+                                <div class="flex flex-col items-center">
+                                    <img src="${b.line_picture_url || '/user.png'}" 
+                                         style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
+                                    <div class="text-xl font-bold text-emerald-700">คุณ ${customerName}</div>
+                                    <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
+                                </div>
+                            `,
+                            timer: 4500,
+                            showConfirmButton: false,
+                            backdrop: `rgba(0,0,0,0.5)`
+                        });
+
+                        // 3. รีโหลดข้อมูลหลังบ้าน
+                        await reloadData('none');
+
+                    } else {
+                        // ถ้าอัปเดตไม่ผ่าน ให้ฟ้อง Error
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: 'ไม่สามารถบันทึกสถานะได้ กรุณาลองใหม่'
+                        });
+                    }
+
+                } else if (b.status === 'CHECKED_IN') {
+                    // กรณีเช็คอินซ้ำ
+                    await Swal.fire({
+                        icon: 'info',
+                        title: 'เช็คอินไปแล้ว',
+                        html: `คุณ <b>${customerName}</b><br/>ลงทะเบียนเรียบร้อยแล้วครับ`,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    // กรณี Cancel
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'รายการถูกยกเลิก',
+                        text: `ไม่สามารถเช็คอินได้ (สถานะ: ${b.status})`,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } else {
+                await Swal.fire({ icon: 'error', title: 'ไม่พบรหัสจองนี้', text: finalCode, timer: 1500, showConfirmButton: false });
             }
 
-            else Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
-        } catch (err) { Swal.fire("Error", err.message, "error"); }
+        } catch (err) {
+            console.error(err);
+            // Swal.fire("System Error", err.message, "error");
+        } finally {
+            // ปลดล็อก (หน่วงเวลา 1.5 วิ กันสแกนเบิ้ลคนเดิม)
+            setTimeout(() => {
+                isProcessingScan.current = false;
+            }, 2500);
+        }
     };
-    console.log("Scan Data Result:", scanData);
+
     const handleFileUpload = async (e) => {
         // 1. เช็คว่ามีไฟล์ไหม
         if (!e.target.files || e.target.files.length === 0) return;
@@ -1877,75 +2028,37 @@ export default function AdminPage() {
             worksheet.getRow(1).height = 35;
 
             // --- ส่วนที่ 2: ตาราง KPI (ด้านซ้าย) ---
-            // Header KPI
-            // const kpiHeaderRow = worksheet.getRow(3);
-            // kpiHeaderRow.values = ["สถานะ", "จำนวน (ราย)", "คิดเป็น %", "", ""]; // คอลัมน์ A, B, C
-            // kpiHeaderRow.font = { bold: true, color: { argb: 'FF1F2937' } };
-            // kpiHeaderRow.alignment = { horizontal: 'center' };
-            // worksheet.mergeCells('A3:B3');
-            // worksheet.getCell('A3').value = "สถานะ";
-
-            // // ข้อมูล KPI แต่ละบรรทัด
-            // const kpiRows = [
-            //     { label: "✅ เข้ารับบริการแล้ว", val: stats.checkedIn, pct: getPercent(stats.checkedIn), color: 'FFDCFCE7' }, // เขียวอ่อน
-            //     { label: "⏳ รอรับบริการ", val: stats.booked, pct: getPercent(stats.booked), color: 'FFFEF9C3' }, // เหลืองอ่อน
-            //     { label: "❌ ยกเลิก", val: stats.cancelled, pct: getPercent(stats.cancelled), color: 'FFFEE2E2' }, // แดงอ่อน
-            //     { label: "🚫 ไม่มาตามนัด", val: stats.noShow, pct: getPercent(stats.noShow), color: 'FFF3F4F6' }, // เทาอ่อน
-            //     { label: "รวมทั้งหมด", val: total, pct: "100%", color: 'FFE5E7EB', bold: true } // เทาเข้ม
-            // ];
-
-            // let currentRow = 4;
-            // kpiRows.forEach(k => {
-            //     const r = worksheet.getRow(currentRow);
-            //     worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-            //     r.getCell(1).value = k.label;
-            //     r.getCell(2).value = k.val;
-            //     r.getCell(3).value = k.pct;
-
-            //     // ตกแต่ง KPI
-            //     r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: k.color } };
-            //     r.getCell(1).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            //     r.getCell(2).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            //     r.getCell(3).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            //     r.getCell(2).alignment = { horizontal: 'center' };
-            //     r.getCell(3).alignment = { horizontal: 'center' };
-
-            //     if (k.bold) r.font = { bold: true };
-            //     currentRow++;
-            // });
-
-            // --- ส่วนที่ 2: ตาราง KPI (ด้านซ้าย) ---
             // 1. Header KPI
             const kpiHeaderRow = worksheet.getRow(3);
-            
+
             // 🔥 แก้ไข 1: เว้นช่องว่าง "" ไว้ที่ตำแหน่งที่ 2 (เพราะคอลัมน์ B จะถูกผสาน)
             // A="สถานะ", B=(ว่าง/ถูกผสาน), C="จำนวน", D="%"
-            kpiHeaderRow.values = ["สถานะ", "", "จำนวน (ราย)", "คิดเป็น %", ""]; 
-            
+            kpiHeaderRow.values = ["สถานะ", "", "จำนวน (ราย)", "คิดเป็น %", ""];
+
             kpiHeaderRow.font = { bold: true, color: { argb: 'FF1F2937' } };
             kpiHeaderRow.alignment = { horizontal: 'center', vertical: 'middle' };
-            
+
             // ผสาน A3 กับ B3 (เพื่อให้คำว่า "สถานะ" กินพื้นที่กว้างขึ้น)
             worksheet.mergeCells('A3:B3');
 
             // 2. ข้อมูล KPI แต่ละบรรทัด
             const kpiRows = [
-                { label: "✅ เข้ารับบริการแล้ว", val: stats.checkedIn, pct: getPercent(stats.checkedIn), color: 'FFDCFCE7' }, 
-                { label: "⏳ รอรับบริการ", val: stats.booked, pct: getPercent(stats.booked), color: 'FFFEF9C3' }, 
-                { label: "❌ ยกเลิก", val: stats.cancelled, pct: getPercent(stats.cancelled), color: 'FFFEE2E2' }, 
-                { label: "🚫 ไม่มาตามนัด", val: stats.noShow, pct: getPercent(stats.noShow), color: 'FFF3F4F6' }, 
-                { label: "รวมทั้งหมด", val: total, pct: "100%", color: 'FFE5E7EB', bold: true } 
+                { label: "✅ เข้ารับบริการแล้ว", val: stats.checkedIn, pct: getPercent(stats.checkedIn), color: 'FFDCFCE7' },
+                { label: "⏳ รอรับบริการ", val: stats.booked, pct: getPercent(stats.booked), color: 'FFFEF9C3' },
+                { label: "❌ ยกเลิก", val: stats.cancelled, pct: getPercent(stats.cancelled), color: 'FFFEE2E2' },
+                { label: "🚫 ไม่มาตามนัด", val: stats.noShow, pct: getPercent(stats.noShow), color: 'FFF3F4F6' },
+                { label: "รวมทั้งหมด", val: total, pct: "100%", color: 'FFE5E7EB', bold: true }
             ];
 
             let currentRow = 4;
             kpiRows.forEach(k => {
                 const r = worksheet.getRow(currentRow);
-                
+
                 // ผสาน A กับ B สำหรับชื่อสถานะ
                 worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-                
+
                 r.getCell(1).value = k.label; // ใส่ Label ที่ A (กินพื้นที่ A+B)
-                
+
                 // 🔥 แก้ไข 2: ขยับตัวเลขไปใส่ช่อง 3 (C) และ 4 (D)
                 r.getCell(3).value = k.val;   // ใส่จำนวนที่ C
                 r.getCell(4).value = k.pct;   // ใส่ % ที่ D
@@ -1953,7 +2066,7 @@ export default function AdminPage() {
                 // ตกแต่ง KPI
                 // สีพื้นหลังใส่ที่ Cell 1 (A)
                 r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: k.color } };
-                
+
                 // ตีเส้นขอบ (ต้องตีเผื่อไปถึงช่อง 4)
                 [1, 3, 4].forEach(col => {
                     r.getCell(col).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -2914,7 +3027,7 @@ export default function AdminPage() {
                     <div className="w-full max-w-md animate-fade-in-up space-y-6">
                         {!scanData ? (
                             <>
-                                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-4 relative flex flex-col">
+                                {/* <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-4 relative flex flex-col">
                                     <div className="flex justify-between items-center mb-3">
                                         <h3 className="font-bold text-gray-700 flex gap-2 items-center"><FiCamera /> กล้อง</h3>
                                         <button onClick={() => setCameraEnabled(!cameraEnabled)} className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${cameraEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{cameraEnabled ? 'เปิดอยู่' : 'ปิดอยู่'}</button>
@@ -2929,12 +3042,60 @@ export default function AdminPage() {
                                         ) : (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400"><FiCameraOff size={40} /><p className="text-sm mt-2">กล้องถูกปิด</p></div>
                                         )}
+                                </div>
+
+                                    
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <div id="reader-file-hidden" className="hidden"></div>
+                                        <label className="flex items-center justify-center gap-2 w-full py-3 bg-stone-100 text-stone-600 rounded-xl font-semibold cursor-pointer hover:bg-stone-200 transition-colors"><FiImage /> เลือกรูป QR Code <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} /></label>
                                     </div>
+                                </div> */}
+
+                                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-4 relative flex flex-col">
+                                    {/* 1. ส่วนหัว: ชื่อ และ ปุ่มกดต่างๆ */}
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="font-bold text-gray-700 flex gap-2 items-center"><FiCamera /> กล้อง</h3>
+
+                                        <div className="flex gap-2">
+                                            {/* 🔥 ปุ่มสลับโหมด Auto */}
+                                            <button
+                                                onClick={() => setAutoCheckIn(!autoCheckIn)}
+                                                className={`text-xs px-3 py-1.5 rounded-full font-bold transition-all border ${autoCheckIn
+                                                    ? 'bg-blue-100 text-blue-700 border-blue-200 shadow-sm'
+                                                    : 'bg-gray-50 text-gray-400 border-gray-200'
+                                                    }`}
+                                            >
+                                                {autoCheckIn ? '⚡ Auto Check-in' : 'Manual Scan'}
+                                            </button>
+
+                                            {/* ปุ่มเปิด/ปิดกล้อง */}
+                                            <button onClick={() => setCameraEnabled(!cameraEnabled)} className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${cameraEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                {cameraEnabled ? 'เปิดอยู่' : 'ปิดอยู่'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 2. ส่วนแสดงผลกล้อง (ที่หายไป) ต้องเอากลับมาไว้ตรงนี้ครับ */}
+                                    <div className="relative w-full rounded-xl overflow-hidden bg-black min-h-[250px] mb-4">
+                                        {cameraEnabled ? (
+                                            <>
+                                                <div id="reader" className="w-full h-full"></div>
+                                                {scanStatus === 'starting' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100/90 z-20"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2"></div><span className="text-xs text-gray-500">กำลังเปิด...</span></div>}
+                                                {scanStatus === 'error' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-center p-4 z-20"><FiAlertTriangle className="text-rose-500 text-3xl mb-2" /><p className="text-xs text-gray-500 mb-2">{scanErrorMsg}</p><button onClick={() => setCameraEnabled(false)} className="text-emerald-600 underline text-xs">ปิดกล้อง</button></div>}
+                                            </>
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400"><FiCameraOff size={40} /><p className="text-sm mt-2">กล้องถูกปิด</p></div>
+                                        )}
+                                    </div>
+
+                                    {/* 3. ส่วนอัปโหลดรูป */}
                                     <div className="pt-2 border-t border-gray-100">
                                         <div id="reader-file-hidden" className="hidden"></div>
                                         <label className="flex items-center justify-center gap-2 w-full py-3 bg-stone-100 text-stone-600 rounded-xl font-semibold cursor-pointer hover:bg-stone-200 transition-colors"><FiImage /> เลือกรูป QR Code <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} /></label>
                                     </div>
                                 </div>
+
+                                {/* สว่นค้นหา */}
                                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                                     <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><FiSearch /> หรือค้นหาด้วยรหัส/เบอร์โทร</h3>
                                     <div className="flex gap-2">
