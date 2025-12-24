@@ -56,7 +56,7 @@ export async function GET(request) {
                             layout: "vertical",
                             contents: [
                                 { type: "text", text: "MISSED APPOINTMENT", weight: "bold", color: "#ffffff", size: "xs", align: "center" },
-                                { type: "text", text: "ท่านไม่ได้เข้ารับบริการ", weight: "bold", color: "#ffffff", size: "lg", align: "center", margin: "md" }
+                                { type: "text", text: "คุณไม่ได้เข้ารับบริการ", weight: "bold", color: "#ffffff", size: "lg", align: "center", margin: "md" }
                             ],
                             backgroundColor: "#EF4444", // 🔥 เปลี่ยนเป็นสีแดง (Red-500) ให้ดูแตกต่าง
                             paddingAll: "20px"

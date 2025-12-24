@@ -314,7 +314,7 @@ export async function POST(request) {
             line_user_id: lineUserId || 'NO_LIFF',
             status: 'BOOKED',
             line_picture_url: line_picture_url || 'No line picture' ,
-            line_display_name: lineDisplayName || 'No line name'
+            line_display_name: line_display_name || 'No line name'
         }]);
 
         if (error) throw error;
