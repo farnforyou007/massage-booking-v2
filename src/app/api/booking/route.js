@@ -231,7 +231,7 @@ const supabase = createClient(
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url } = body;
+        const { name, phone, date, slot_id, slotLabel, lineUserId , line_picture_url , line_display_name } = body;
 
         // -----------------------------------------------------------------------
         // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
