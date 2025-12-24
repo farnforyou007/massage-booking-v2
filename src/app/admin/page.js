@@ -122,6 +122,7 @@ export default function AdminPage() {
     const [autoCheckIn, setAutoCheckIn] = useState(true);
     // 🔥 2. เพิ่ม Ref เพื่อกันการสแกนรัวๆ (Scan Lock)
     const isProcessingScan = useRef(false);
+    const [torchOn, setTorchOn] = useState(false);
 
     // const [authToken, setAuthToken] = useState("");
     const isAuthed = !!authToken;
@@ -948,57 +949,43 @@ export default function AdminPage() {
 
     // const startScanner = async () => {
     //     if (!document.getElementById("reader")) return;
+
+    //     // เคลียร์ของเก่าก่อนเริ่มใหม่
     //     if (scannerRef.current) await stopScanner();
-    //     const html5QrCode = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, showTorchButtonIfSupported: true }, false);
+
+    //     // 1. สร้าง Instance แบบกำหนดเอง (ไม่ใช่ Scanner UI)
+    //     const html5QrCode = new Html5Qrcode("reader");
     //     scannerRef.current = html5QrCode;
-    //     setScanStatus("starting"); setScanErrorMsg("");
 
-    //     html5QrCode.render((decodedText) => {
-    //         handleScanSuccess(decodedText);
-    //         html5QrCode.clear();
-    //     }, (error) => { });
-    //     setScanStatus("active");
+    //     setScanStatus("starting");
+    //     setScanErrorMsg("");
+
+    //     try {
+    //         // 2. สั่ง Start โดยบังคับ facingMode: "environment" (กล้องหลัง)
+    //         await html5QrCode.start(
+    //             { facingMode: "environment" },
+    //             {
+    //                 fps: 10,
+    //                 qrbox: { width: 250, height: 250 },
+    //                 aspectRatio: 1.0
+    //             },
+    //             (decodedText) => {
+    //                 // เมื่อสแกนเจอ
+    //                 handleScanSuccess(decodedText);
+    //                 // ถ้าอยากให้เจอแล้วหยุดกล้องเลย ให้เปิดบรรทัดล่างนี้
+    //                 // html5QrCode.stop().catch(err => console.error(err));
+    //             },
+    //             (errorMessage) => {
+    //                 // กรณีสแกนไม่เจอในแต่ละเฟรม (ปล่อยว่างได้)
+    //             }
+    //         );
+    //         setScanStatus("active");
+    //     } catch (err) {
+    //         console.error("Camera Error:", err);
+    //         setScanStatus("error");
+    //         setScanErrorMsg("ไม่สามารถเปิดกล้องหลังได้ หรือไม่มีสิทธิ์เข้าถึง");
+    //     }
     // };
-
-    const startScanner = async () => {
-        if (!document.getElementById("reader")) return;
-
-        // เคลียร์ของเก่าก่อนเริ่มใหม่
-        if (scannerRef.current) await stopScanner();
-
-        // 1. สร้าง Instance แบบกำหนดเอง (ไม่ใช่ Scanner UI)
-        const html5QrCode = new Html5Qrcode("reader");
-        scannerRef.current = html5QrCode;
-
-        setScanStatus("starting");
-        setScanErrorMsg("");
-
-        try {
-            // 2. สั่ง Start โดยบังคับ facingMode: "environment" (กล้องหลัง)
-            await html5QrCode.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0
-                },
-                (decodedText) => {
-                    // เมื่อสแกนเจอ
-                    handleScanSuccess(decodedText);
-                    // ถ้าอยากให้เจอแล้วหยุดกล้องเลย ให้เปิดบรรทัดล่างนี้
-                    // html5QrCode.stop().catch(err => console.error(err));
-                },
-                (errorMessage) => {
-                    // กรณีสแกนไม่เจอในแต่ละเฟรม (ปล่อยว่างได้)
-                }
-            );
-            setScanStatus("active");
-        } catch (err) {
-            console.error("Camera Error:", err);
-            setScanStatus("error");
-            setScanErrorMsg("ไม่สามารถเปิดกล้องหลังได้ หรือไม่มีสิทธิ์เข้าถึง");
-        }
-    };
 
     // const stopScanner = async () => {
     //     if (scannerRef.current) {
@@ -1007,6 +994,71 @@ export default function AdminPage() {
     //         setScanStatus("idle");
     //     }
     // };
+    const startScanner = async () => {
+        if (!document.getElementById("reader")) return;
+
+        // เคลียร์ของเก่าก่อนเริ่มใหม่
+        if (scannerRef.current) await stopScanner();
+
+        // 1. สร้าง Instance
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+
+        setScanStatus("starting");
+        setScanErrorMsg("");
+
+        try {
+            // 🔥 สูตรลับ: Constraints สำหรับกล้องมือถือ (Pro Mode)
+            const videoConstraints = {
+                facingMode: "environment", // กล้องหลัง
+                focusMode: "continuous",   // 🎯 สั่งโฟกัสตลอดเวลา (สำคัญมาก)
+                width: { min: 640, ideal: 1280, max: 1920 }, // ขอความละเอียดสูงหน่อยภาพจะได้ชัด
+                height: { min: 480, ideal: 720, max: 1080 },
+                advanced: [
+                    { focusMode: "continuous" },      // ย้ำโฟกัสอีกรอบ
+                    { exposureMode: "continuous" },   // ☀️ ปรับแสงออโต้ (สู้แสงสะท้อน)
+                    { whiteBalanceMode: "continuous" }// 🎨 สมดุลแสงขาว
+                ]
+            };
+
+            // 2. สั่ง Start
+            await html5QrCode.start(
+                videoConstraints,
+                {
+                    fps: 25, // 🚀 เร่งความเร็วเป็น 25 เฟรม/วิ (สแกนไวขึ้น 2.5 เท่า)
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    disableFlip: false, // ห้ามกลับด้านภาพ (ช่วยให้อ่าน QR ง่ายขึ้น)
+                },
+                (decodedText) => {
+                    // เมื่อสแกนเจอ
+                    handleScanSuccess(decodedText);
+                },
+                (errorMessage) => {
+                    // ไม่ต้องทำอะไร ปล่อยผ่าน
+                }
+            );
+            setScanStatus("active");
+
+        } catch (err) {
+            console.error("Advanced Camera Error:", err);
+
+            // 🚑 Fallback: ถ้าเครื่องไหนไม่รองรับโหมด Pro ให้ถอยกลับมาใช้โหมดธรรมดา
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    (decodedText) => handleScanSuccess(decodedText),
+                    () => { }
+                );
+                setScanStatus("active");
+            } catch (fallbackErr) {
+                setScanStatus("error");
+                setScanErrorMsg("ไม่สามารถเปิดกล้องหลังได้ (กรุณาอนุญาตให้ใช้กล้อง)");
+            }
+        }
+    };
+
 
     const stopScanner = async () => {
         if (scannerRef.current) {
@@ -2571,6 +2623,21 @@ export default function AdminPage() {
         );
     };
 
+    // ฟังก์ชันเปิด/ปิดไฟฉาย
+    const toggleTorch = async () => {
+        if (!scannerRef.current) return;
+        try {
+            // คำสั่งเปิด/ปิดไฟฉาย ของ Html5Qrcode
+            await scannerRef.current.applyVideoConstraints({
+                advanced: [{ torch: !torchOn }]
+            });
+            setTorchOn(!torchOn);
+        } catch (err) {
+            console.error(err);
+            Swal.fire({ toast: true, icon: 'warning', title: 'อุปกรณ์นี้ไม่รองรับไฟฉาย', timer: 2000, showConfirmButton: false });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
             <style>{`@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap'); .font-sans { font-family: 'Prompt', sans-serif; }`}</style>
@@ -3263,6 +3330,21 @@ export default function AdminPage() {
                                                     }`}
                                             >
                                                 {autoCheckIn ? '⚡ Auto Check-in' : 'Manual Scan'}
+                                            </button>
+
+                                            {/* ปุ่มเปิดไฟฉาย */}
+                                            <button
+                                                onClick={toggleTorch}
+                                                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${torchOn
+                                                        ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md transform scale-105'
+                                                        : 'bg-gray-100 text-gray-500 border-gray-200'
+                                                    }`}
+                                            >
+                                                {/* ไอคอนสายฟ้า (ถ้าไม่มีใช้ตัวหนังสือแทนได้) */}
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                                {torchOn ? 'ปิดไฟ' : 'เปิดไฟ'}
                                             </button>
 
                                             {/* ปุ่มเปิด/ปิดกล้อง */}
