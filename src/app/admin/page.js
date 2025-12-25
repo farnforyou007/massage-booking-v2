@@ -71,6 +71,23 @@ const Toast = Swal.mixin({
     }
 });
 
+// ฟังก์ชันสำหรับสั่งให้บราวเซอร์พูดภาษาไทย
+const speakThai = (text) => {
+    if ('speechSynthesis' in window) {
+        // ยกเลิกเสียงที่พูดค้างอยู่ (ถ้ามี)
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'th-TH'; // ตั้งค่าเป็นภาษาไทย
+        utterance.rate = 1.0; // ความเร็วปกติ
+        utterance.pitch = 1.0; // ระดับเสียงปกติ
+
+        // สั่งให้พูด
+        window.speechSynthesis.speak(utterance);
+    }
+};
+
+
 function renderStatusBadge(status) {
     switch (status) {
         case "BOOKED":
@@ -475,7 +492,7 @@ export default function AdminPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode, currentPage]);
 
-     useEffect(() => {
+    useEffect(() => {
         if (authToken && !isFirstLoad.current) {
             // ใช้โหมด 'none' หน้าจอจะไม่กระพริบ ไม่จาง ข้อมูลจะดีดเปลี่ยนเองเมื่อเสร็จ
             reloadData('skeleton'); // เพิ่มโหลดแบบ skeleton
@@ -1459,22 +1476,28 @@ export default function AdminPage() {
                     // --------------------------------
 
                     if (updateRes.ok) {
-                        const audio = new Audio('/alert.mp3');
+
+                        
+                        // เช็คว่ามีฟังก์ชัน speakThai หรือยัง (ถ้าไม่มีให้ก๊อปจากข้างล่างไปใส่)
+                      
+                        
+                        const audio = new Audio('/welcome.mp3');
                         audio.play().catch(() => { });
 
+                        // speakThai(`คุณ ${customerName} ยืนยันสำเร็จ`);
                         await Swal.fire({
                             icon: 'success',
-                            title: 'เช็คอินสำเร็จ!',
+                            title: 'ยืนยันสำเร็จ!',
                             html: `
                                 <div class="flex flex-col items-center">
                                     <img src="${b.line_picture_url || '/user.png'}" 
                                          style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
-                                    <div class="text-xl font-bold text-emerald-700">คุณ ${customerName}</div>
+                                    <div class="text-xl font-bold text-emerald-700">คุณ ${customerName} </div>
                                     <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus} นาที</div>
                                     <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
                                 </div>
                             `,
-                            timer: 2500,
+                            timer: 3000,
                             showConfirmButton: false,
                             backdrop: `rgba(0,0,0,0.5)`
                         });
@@ -1486,8 +1509,11 @@ export default function AdminPage() {
                     }
 
                 } else if (b.status === 'CHECKED_IN') {
+                    
                     await Swal.fire({ icon: 'info', title: 'เช็คอินไปแล้ว', html: `คุณ <b>${customerName}</b><br/>ลงทะเบียนเรียบร้อยแล้วครับ`, timer: 2000, showConfirmButton: false });
                 } else {
+                    
+
                     await Swal.fire({ icon: 'warning', title: 'รายการถูกยกเลิก', text: `สถานะ: ${b.status}`, timer: 3000, showConfirmButton: false });
                 }
             } else {
@@ -2930,7 +2956,7 @@ export default function AdminPage() {
                                                                     <div className="flex flex-col items-center justify-center gap-1">
                                                                         {renderStatusBadge(b.status)}
 
-                                                                    {/* </div>
+                                                                        {/* </div>
                                                                     <div className="flex items-center gap-1.5 mt-0.5"> */}
 
                                                                         {/* 🔥 ถ้ามีเวลาเช็คอิน ให้แสดงเวลาด้วย */}
