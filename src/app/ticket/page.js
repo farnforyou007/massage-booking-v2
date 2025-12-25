@@ -669,11 +669,12 @@ function TicketContent() {
                             icon: 'success',
                             title: 'เข้ารับบริการสำเร็จ!',
                             html: 'เจ้าหน้าที่ทำการยืนยันรายการแล้ว<br/><b>เชิญเข้ารับบริการได้เลยครับ</b>',
-                            timer: 3000,
+                            timer: 4000,
                             showConfirmButton: false,
                             // backdrop: `rgba(16, 185, 129, 0.2)`
                         });
-
+                        const audio = new Audio('/welcome.mp3');
+                        audio.play().catch(() => { });
                         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
                 }

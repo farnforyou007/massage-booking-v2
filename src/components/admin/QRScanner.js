@@ -51,21 +51,29 @@ export default function QRScanner({
         if (!document.getElementById("reader")) return;
         if (scannerRef.current) await stopScanner();
         await new Promise(r => setTimeout(r, 1000));
+
+        // ✅✅✅ Security Check ครั้งที่ 2 (สำคัญมาก!): 
+        // เช็คอีกทีว่าหลังจากรอ 1 วิแล้ว กล่อง reader ยังอยู่ไหม?
+        // ถ้าผู้ใช้กดปิดกล้อง หรือเปลี่ยนหน้าไปแล้ว ระหว่างรอ -> ให้หยุดทำงานทันที อย่าฝืนสร้างกล้อง
+        if (!document.getElementById("reader") || !cameraEnabled) return;
+        
         const html5QrCode = new Html5Qrcode("reader");
         scannerRef.current = html5QrCode;
         setScanStatus("starting"); setScanErrorMsg("");
         const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
         try {
-            await html5QrCode.start(selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" }, config, 
-                (decodedText) => onScanSuccess(decodedText, autoCheckIn), 
+            await html5QrCode.start(selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" }, config,
+                (decodedText) => onScanSuccess(decodedText, autoCheckIn),
                 // (decodedText) => onScanSuccess(decodedText, autoCheckInRef.current),
                 () => { });
             setScanStatus("active");
         } catch (err) {
-            try { await html5QrCode.start({ facingMode: "user" }, config, 
-                (decodedText) => onScanSuccess(decodedText, autoCheckIn),
-                // (decodedText) => onScanSuccess(decodedText, autoCheckInRef.current),
-                () => { }); setScanStatus("active"); }
+            try {
+                await html5QrCode.start({ facingMode: "user" }, config,
+                    (decodedText) => onScanSuccess(decodedText, autoCheckIn),
+                    // (decodedText) => onScanSuccess(decodedText, autoCheckInRef.current),
+                    () => { }); setScanStatus("active");
+            }
             catch (err2) { setScanStatus("error"); setScanErrorMsg("กล้องค้าง! กรุณารีเฟรชหน้าเว็บ"); }
         }
     };
