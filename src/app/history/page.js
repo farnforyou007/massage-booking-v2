@@ -240,9 +240,9 @@ export default function MyHistoryPage() {
                 console.log("Mock Mode Activated");
                 setTimeout(() => {
                     setBookings([
-                        { id: 1, booking_date: '2025-12-25', slot_label: '09:00-10:00', status: 'BOOKED', booking_code: 'MOCK-8899' },
-                        { id: 2, booking_date: '2025-11-10', slot_label: '13:00-14:00', status: 'CHECKED_IN', booking_code: 'MOCK-1122' },
-                        { id: 3, booking_date: '2025-10-05', slot_label: '10:00-11:30', status: 'CANCELLED', booking_code: 'MOCK-3344' }
+                        { id: 1, customer_name: 'อิฟฟาน ยิงจอระเละ' , booking_date: '2025-12-25', slot_label: '09:00-10:00', status: 'BOOKED', booking_code: 'MOCK-8899' },
+                        { id: 2, customer_name: 'เอโดงาวะ โคนัน' , booking_date: '2025-11-10', slot_label: '13:00-14:00', status: 'CHECKED_IN', booking_code: 'MOCK-1122' },
+                        { id: 3, customer_name: 'อูซึมากิ นารูโตะ' ,booking_date: '2025-10-05', slot_label: '10:00-11:30', status: 'CANCELLED', booking_code: 'MOCK-3344' }
                     ]);
                     setLoading(false);
                     setIsRefreshing(false);
@@ -421,9 +421,9 @@ export default function MyHistoryPage() {
                             {/* แถบสีสถานะด้านซ้าย */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1.5 
                                 ${booking.status === 'BOOKED' ? 'bg-yellow-400' :
-                                    booking.status === 'CHECKED_IN' ? 'bg-emerald-500' : 
-                                    booking.status === 'NO_SHOW' ?  'bg-gray-500' : 'bg-rose-500'}`}>
-                                    
+                                    booking.status === 'CHECKED_IN' ? 'bg-emerald-500' :
+                                        booking.status === 'NO_SHOW' ? 'bg-gray-500' : 'bg-rose-500'}`}>
+
                             </div>
 
                             <div className="flex justify-between items-start mb-3 pl-2">
@@ -441,14 +441,22 @@ export default function MyHistoryPage() {
                                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 
                                     ${booking.status === 'BOOKED' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                                         booking.status === 'CHECKED_IN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                        booking.status === 'NO_SHOW' ? 'bg-gray-50 text-gray-700 border-gray-200' :
-                                            'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                                            booking.status === 'NO_SHOW' ? 'bg-gray-50 text-gray-700 border-gray-200' :
+                                                'bg-rose-50 text-rose-700 border-rose-200'}`}>
                                     {booking.status === 'BOOKED' ? 'รอรับบริการ' :
                                         booking.status === 'CHECKED_IN' ? <><FiCheckCircle /> สำเร็จ</> :
-                                        booking.status === 'NO_SHOW' ? <><FiXCircle /> ไม่มาตามนัด</> :
-                                            <><FiXCircle /> ยกเลิก</>}
+                                            booking.status === 'NO_SHOW' ? <><FiXCircle /> ไม่มาตามนัด</> :
+                                                <><FiXCircle /> ยกเลิก</>}
                                 </span>
                             </div>
+
+                            {/* 🔥 แสดงชื่อผู้จอง (เพิ่มส่วนนี้) */}
+                            {booking.customer_name && (
+                                <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 w-fit">
+                                    <FiUser className="text-gray-400" />
+                                    <span>ชื่อ-สกุล : <b>{booking.customer_name}</b></span>
+                                </div>
+                            )}
 
                             <hr className="border-dashed border-gray-100 my-3 ml-2" />
 
@@ -472,7 +480,7 @@ export default function MyHistoryPage() {
                                         href={`/ticket?code=${booking.booking_code}`}
                                         // className="text-xs bg-gray-50 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 border border-gray-200 transition-colors font-medium flex items-center gap-1"
                                         // className="text-xs bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
-                                    className="text-xs  bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
+                                        className="text-xs  bg-emerald-50 text-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors font-medium flex items-center gap-1 shadow-sm shadow-emerald-200"
                                     >
                                         <FiList /> รายละเอียด
                                     </Link>
