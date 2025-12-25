@@ -1040,178 +1040,178 @@ export default function AdminPage() {
     //     }
     // };
 
-    // const handleScanSuccess = async (decodedText) => {
-    //     if (isProcessingScan.current) return;
-    //     isProcessingScan.current = true;
+    const handleScanSuccess = async (decodedText) => {
+        if (isProcessingScan.current) return;
+        isProcessingScan.current = true;
 
-    //     let finalCode = decodedText;
-    //     try { const url = new URL(decodedText); const c = url.searchParams.get("code"); if (c) finalCode = c; } catch (e) { }
+        let finalCode = decodedText;
+        try { const url = new URL(decodedText); const c = url.searchParams.get("code"); if (c) finalCode = c; } catch (e) { }
 
-    //     // --- 1. โหมด Manual ---
-    //     if (!autoCheckIn) {
-    //         setCameraEnabled(false);
-    //         Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    //         try {
-    //             const res = await getBookingByCode(finalCode);
-    //             Swal.close();
-    //             if (res.ok && res.booking) {
-    //                 const b = res.booking;
+        // --- 1. โหมด Manual ---
+        if (!autoCheckIn) {
+            setCameraEnabled(false);
+            Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            try {
+                const res = await getBookingByCode(finalCode);
+                Swal.close();
+                if (res.ok && res.booking) {
+                    const b = res.booking;
 
-    //                 // 🔥 แก้ไขการเช็ควันที่ (ตัดเวลาทิ้ง เอาแค่ 10 ตัวแรก YYYY-MM-DD)
-    //                 const rawDate = b.booking_date || b.date || "";
-    //                 const targetDate = rawDate.split('T')[0]; // ตัดเวลาทิ้งถ้ามี
-    //                 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+                    // 🔥 แก้ไขการเช็ควันที่ (ตัดเวลาทิ้ง เอาแค่ 10 ตัวแรก YYYY-MM-DD)
+                    const rawDate = b.booking_date || b.date || "";
+                    const targetDate = rawDate.split('T')[0]; // ตัดเวลาทิ้งถ้ามี
+                    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
-    //                 if (targetDate !== today) {
-    //                     await Swal.fire({
-    //                         icon: 'warning',
-    //                         title: 'ผิดวัน!',
-    //                         html: `รายการนี้เป็นของวันที่ <b>${formatThaiDateAdmin(targetDate)}</b><br/>(แต่วันนี้คือ ${formatThaiDateAdmin(today)})`,
-    //                         confirmButtonText: 'เข้าใจแล้ว' // Manual ให้แอดมินกดรับทราบ แต่ยังทำงานต่อได้
-    //                     });
-    //                 }
+                    if (targetDate !== today) {
+                        await Swal.fire({
+                            icon: 'warning',
+                            title: 'ผิดวัน!',
+                            html: `รายการนี้เป็นของวันที่ <b>${formatThaiDateAdmin(targetDate)}</b><br/>(แต่วันนี้คือ ${formatThaiDateAdmin(today)})`,
+                            confirmButtonText: 'เข้าใจแล้ว' // Manual ให้แอดมินกดรับทราบ แต่ยังทำงานต่อได้
+                        });
+                    }
 
-    //                 setScanData({
-    //                     ...b,
-    //                     name: b.customer_name || b.name,
-    //                     code: b.booking_code || b.code,
-    //                     slot: b.slot_label || b.slot,
-    //                     date: targetDate,
-    //                     line_picture_url: b.line_picture_url || null
-    //                 });
-    //             } else {
-    //                 Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
-    //             }
-    //         } catch (err) { Swal.fire("Error", err.message, "error"); }
+                    setScanData({
+                        ...b,
+                        name: b.customer_name || b.name,
+                        code: b.booking_code || b.code,
+                        slot: b.slot_label || b.slot,
+                        date: targetDate,
+                        line_picture_url: b.line_picture_url || null
+                    });
+                } else {
+                    Swal.fire({ icon: "error", title: "ไม่พบข้อมูล", text: `รหัส: ${finalCode}`, timer: 2000, showConfirmButton: false });
+                }
+            } catch (err) { Swal.fire("Error", err.message, "error"); }
 
-    //         setTimeout(() => { isProcessingScan.current = false; }, 500);
-    //         return;
-    //     }
+            setTimeout(() => { isProcessingScan.current = false; }, 500);
+            return;
+        }
 
-    //     // --- 2. โหมด Auto Check-in ---
-    //     try {
-    //         const res = await getBookingByCode(finalCode);
+        // --- 2. โหมด Auto Check-in ---
+        try {
+            const res = await getBookingByCode(finalCode);
 
-    //         if (res.ok && res.booking) {
-    //             const b = res.booking;
-    //             const customerName = b.customer_name || b.name || "ลูกค้า";
-    //             const slotLabel = b.slot_label || b.slot || "-";
-    //             const bookingCode = b.booking_code || b.code;
+            if (res.ok && res.booking) {
+                const b = res.booking;
+                const customerName = b.customer_name || b.name || "ลูกค้า";
+                const slotLabel = b.slot_label || b.slot || "-";
+                const bookingCode = b.booking_code || b.code;
 
-    //             // 🔥 แก้ไขการเช็ควันที่ (ตัดเวลาทิ้งเช่นกัน)
-    //             const rawDate = b.booking_date || b.date || "";
-    //             const targetDate = rawDate.split('T')[0]; // เอาแค่ YYYY-MM-DD
-    //             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+                // 🔥 แก้ไขการเช็ควันที่ (ตัดเวลาทิ้งเช่นกัน)
+                const rawDate = b.booking_date || b.date || "";
+                const targetDate = rawDate.split('T')[0]; // เอาแค่ YYYY-MM-DD
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
-    //             // Debug ดูค่าจริง (กด F12 ดูใน Console ได้ถ้ายังผิด)
-    //             console.log(`Checking Date: DB=${targetDate} vs Today=${today}`);
+                // Debug ดูค่าจริง (กด F12 ดูใน Console ได้ถ้ายังผิด)
+                console.log(`Checking Date: DB=${targetDate} vs Today=${today}`);
 
-    //             if (targetDate !== today) {
-    //                 await Swal.fire({
-    //                     icon: 'error',
-    //                     title: 'คุณไม่ได้ลงทะเบียนสำหรับวันนี้',
-    //                     html: `คิวนี้เป็นของวันที่<br/><b style="font-size:1.2em; color:#ef4444;">${formatThaiDateAdmin(targetDate)}</b>`,
-    //                     timer: 4000,
-    //                     showConfirmButton: false,
-    //                     backdrop: `rgba(0,0,0,0.5)`
-    //                 });
-    //                 return; // ❌ จบการทำงานทันที
-    //             }
+                if (targetDate !== today) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'คุณไม่ได้ลงทะเบียนสำหรับวันนี้',
+                        html: `คิวนี้เป็นของวันที่<br/><b style="font-size:1.2em; color:#ef4444;">${formatThaiDateAdmin(targetDate)}</b>`,
+                        timer: 4000,
+                        showConfirmButton: false,
+                        backdrop: `rgba(0,0,0,0.5)`
+                    });
+                    return; // ❌ จบการทำงานทันที
+                }
 
-    //             // ถ้าวันที่ตรงกันเป๊ะ ค่อยทำต่อ...
-    //             if (b.status === 'BOOKED') {
-    //                 const updateRes = await adminUpdateBookingStatus(bookingCode, "CHECKED_IN", authToken);
+                // ถ้าวันที่ตรงกันเป๊ะ ค่อยทำต่อ...
+                if (b.status === 'BOOKED') {
+                    const updateRes = await adminUpdateBookingStatus(bookingCode, "CHECKED_IN", authToken);
 
-    //                 // --- ส่วนคำนวณเวลา (แบบละเอียด: นับนาที) ---
-    //                 let timeStatus = "";
-    //                 try {
-    //                     // 1. ดึงเวลาเริ่มจอง (เช่น "14:45-16:15" -> เอาแค่ "14:45")
-    //                     const timeParts = slotLabel.split('-')[0].trim().split(':');
-    //                     const bookH = parseInt(timeParts[0]);
-    //                     const bookM = parseInt(timeParts[1]);
+                    // --- ส่วนคำนวณเวลา (แบบละเอียด: นับนาที) ---
+                    let timeStatus = "";
+                    try {
+                        // 1. ดึงเวลาเริ่มจอง (เช่น "14:45-16:15" -> เอาแค่ "14:45")
+                        const timeParts = slotLabel.split('-')[0].trim().split(':');
+                        const bookH = parseInt(timeParts[0]);
+                        const bookM = parseInt(timeParts[1]);
 
-    //                     // 2. สร้างตัวแปรเวลาเพื่อเปรียบเทียบ
-    //                     const now = new Date();
-    //                     const bookingTime = new Date();
-    //                     bookingTime.setHours(bookH, bookM, 0, 0); // ตั้งเวลาเป็นเวลาจอง (วันนี้)
+                        // 2. สร้างตัวแปรเวลาเพื่อเปรียบเทียบ
+                        const now = new Date();
+                        const bookingTime = new Date();
+                        bookingTime.setHours(bookH, bookM, 0, 0); // ตั้งเวลาเป็นเวลาจอง (วันนี้)
 
-    //                     // 3. หาผลต่างเป็นนาที (ลบกันจะได้ millisecond -> หาร 60000 เพื่อเป็นนาที)
-    //                     // ค่า + แปลว่ามาช้า, ค่า - แปลว่ามาก่อน
-    //                     const diffMinutes = Math.floor((now - bookingTime) / 60000);
+                        // 3. หาผลต่างเป็นนาที (ลบกันจะได้ millisecond -> หาร 60000 เพื่อเป็นนาที)
+                        // ค่า + แปลว่ามาช้า, ค่า - แปลว่ามาก่อน
+                        const diffMinutes = Math.floor((now - bookingTime) / 60000);
 
-    //                     // 4. กำหนดเงื่อนไข (ปรับตัวเลขนาทีได้ตามใจชอบ)
-    //                     if (diffMinutes > 15) {
-    //                         // มาช้ากว่า 15 นาที
-    //                         timeStatus = `<span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-md">มาสาย (${diffMinutes} นาที)</span>`;
-    //                     } else if (diffMinutes < -30) {
-    //                         // มาก่อนเวลาเกิน 30 นาที
-    //                         timeStatus = `<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">มาก่อนเวลา (${Math.abs(diffMinutes)} นาที)</span>`;
-    //                     } else {
-    //                         // อยู่ในช่วง -30 ถึง +15 นาที
-    //                         timeStatus = `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-md">ตรงเวลา</span>`;
-    //                     }
-    //                 } catch (e) {
-    //                     console.error("Time calc error", e);
-    //                     timeStatus = ""; // ถ้าคำนวณไม่ได้ ก็ไม่ต้องโชว์
-    //                 }
-    //                 // --------------------------------
-    //                 // --------------------------------
+                        // 4. กำหนดเงื่อนไข (ปรับตัวเลขนาทีได้ตามใจชอบ)
+                        if (diffMinutes > 15) {
+                            // มาช้ากว่า 15 นาที
+                            timeStatus = `<span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-md">มาสาย (${diffMinutes} นาที)</span>`;
+                        } else if (diffMinutes < -30) {
+                            // มาก่อนเวลาเกิน 30 นาที
+                            timeStatus = `<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">มาก่อนเวลา (${Math.abs(diffMinutes)} นาที)</span>`;
+                        } else {
+                            // อยู่ในช่วง -30 ถึง +15 นาที
+                            timeStatus = `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-md">ตรงเวลา</span>`;
+                        }
+                    } catch (e) {
+                        console.error("Time calc error", e);
+                        timeStatus = ""; // ถ้าคำนวณไม่ได้ ก็ไม่ต้องโชว์
+                    }
+                    // --------------------------------
+                    // --------------------------------
 
-    //                 if (updateRes.ok) {
-
-
-    //                     // เช็คว่ามีฟังก์ชัน speakThai หรือยัง (ถ้าไม่มีให้ก๊อปจากข้างล่างไปใส่)
+                    if (updateRes.ok) {
 
 
-    //                     const audio = new Audio('/welcome.mp3');
-    //                     audio.play().catch(() => { });
+                        // เช็คว่ามีฟังก์ชัน speakThai หรือยัง (ถ้าไม่มีให้ก๊อปจากข้างล่างไปใส่)
 
-    //                     // speakThai(`คุณ ${customerName} ยืนยันสำเร็จ`);
-    //                     await Swal.fire({
-    //                         icon: 'success',
-    //                         title: 'ตรวจสอบเรียบร้อย!',
-    //                         html: `
-    //                             <div class="flex flex-col items-center">
-    //                                 <img src="${b.line_picture_url || '/user.png'}" 
-    //                                      style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
-    //                                 <div class="text-xl font-bold text-emerald-700">คุณ ${customerName} </div>
-    //                                 <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus} นาที</div>
-    //                                 <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
-    //                             </div>
-    //                         `,
-    //                         timer: 3000,
-    //                         showConfirmButton: false,
-    //                         backdrop: `rgba(0,0,0,0.5)`
-    //                     });
 
-    //                     await reloadData('none');
+                        const audio = new Audio('/welcome.mp3');
+                        audio.play().catch(() => { });
 
-    //                 } else {
-    //                     await Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'บันทึกสถานะไม่สำเร็จ' });
-    //                 }
+                        // speakThai(`คุณ ${customerName} ยืนยันสำเร็จ`);
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'ตรวจสอบเรียบร้อย!',
+                            html: `
+                                <div class="flex flex-col items-center">
+                                    <img src="${b.line_picture_url || '/user.png'}" 
+                                         style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
+                                    <div class="text-xl font-bold text-emerald-700">คุณ ${customerName} </div>
+                                    <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus} นาที</div>
+                                    <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
+                                </div>
+                            `,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            backdrop: `rgba(0,0,0,0.5)`
+                        });
 
-    //             } else if (b.status === 'CHECKED_IN') {
-    //                 const audio = new Audio('/checkin.mp3');
-    //                 audio.play().catch(() => { });
-    //                 await Swal.fire({ icon: 'info', title: 'เช็คอินไปแล้ว', html: `คุณ <b>${customerName}</b><br/>ลงทะเบียนเรียบร้อยแล้วครับ`, timer: 2000, showConfirmButton: false });
-    //             } else {
-    //                 const audio = new Audio('/cancle.mp3');
-    //                 audio.play().catch(() => { });
+                        await reloadData('none');
 
-    //                 await Swal.fire({ icon: 'warning', title: 'รายการถูกยกเลิก', text: `สถานะ: ${b.status}`, timer: 3000, showConfirmButton: false });
-    //             }
-    //         } else {
-    //             const audio = new Audio('/nobooking.mp3');
-    //             audio.play().catch(() => { });
-    //             await Swal.fire({ icon: 'error', title: 'ไม่พบรหัสจองนี้', text: finalCode, timer: 1500, showConfirmButton: false });
-    //         }
+                    } else {
+                        await Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'บันทึกสถานะไม่สำเร็จ' });
+                    }
 
-    //     } catch (err) {
-    //         console.error(err);
-    //     } finally {
-    //         setTimeout(() => { isProcessingScan.current = false; }, 1500);
-    //     }
-    // };
+                } else if (b.status === 'CHECKED_IN') {
+                    const audio = new Audio('/checkin.mp3');
+                    audio.play().catch(() => { });
+                    await Swal.fire({ icon: 'info', title: 'เช็คอินไปแล้ว', html: `คุณ <b>${customerName}</b><br/>ลงทะเบียนเรียบร้อยแล้วครับ`, timer: 2000, showConfirmButton: false });
+                } else {
+                    const audio = new Audio('/cancle.mp3');
+                    audio.play().catch(() => { });
+
+                    await Swal.fire({ icon: 'warning', title: 'รายการถูกยกเลิก', text: `สถานะ: ${b.status}`, timer: 3000, showConfirmButton: false });
+                }
+            } else {
+                const audio = new Audio('/nobooking.mp3');
+                audio.play().catch(() => { });
+                await Swal.fire({ icon: 'error', title: 'ไม่พบรหัสจองนี้', text: finalCode, timer: 1500, showConfirmButton: false });
+            }
+
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setTimeout(() => { isProcessingScan.current = false; }, 1500);
+        }
+    };
 
     // ---------------------------------------------------------------
     // 📷 Logic กล้อง (แก้ใหม่: เพิ่มเลือกกล้อง + กัน Error)
@@ -1273,42 +1273,69 @@ export default function AdminPage() {
     }, [activeTab, scanData, cameraEnabled, selectedDeviceId]); // เพิ่ม selectedDeviceId เข้าไป เพื่อให้รีสตาร์ทเมื่อเปลี่ยนกล้อง
 
     const startScanner = async () => {
-        // เช็คว่ามี div รอรับหรือยัง
         if (!document.getElementById("reader")) return;
 
+        // 🛡️ 1. เช็ค HTTPS
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             setScanStatus("error");
-            setScanErrorMsg("กล้องใช้งานไม่ได้ (กรุณาใช้ HTTPS หรือ Localhost เท่านั้น)");
+            setScanErrorMsg("Browser ไม่รองรับ (ต้องใช้ HTTPS)");
             return;
         }
-        // ถ้ามี instance เก่าค้างอยู่ ให้ปิดก่อนเสมอ
+
+        // 🧹 2. เคลียร์ของเก่า (สำคัญมาก: เพิ่มเวลาพักเป็น 1 วินาที)
         if (scannerRef.current) {
             await stopScanner();
         }
+        // รอ 1 วินาที ให้กล้องหายค้างชัวร์ๆ
+        await new Promise(r => setTimeout(r, 1000));
 
+        // 3. สร้าง Instance
         const html5QrCode = new Html5Qrcode("reader");
         scannerRef.current = html5QrCode;
 
         setScanStatus("starting");
         setScanErrorMsg("");
 
+        const config = {
+            fps: 10, // 🔻 ลด FPS ลงเหลือ 10 เพื่อความเสถียร
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            disableFlip: false 
+        };
+
         try {
+            // 🎬 รอบที่ 1: พยายามเปิดตามที่เลือก (หรือกล้องหลัง)
+            const mode = selectedDeviceId 
+                ? { deviceId: { exact: selectedDeviceId } } 
+                : { facingMode: "environment" };
+
             await html5QrCode.start(
-                { deviceId: { exact: selectedDeviceId } }, // บังคับใช้ ID กล้องที่เลือก
-                {
-                    fps: 20,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0,
-                    disableFlip: false
-                },
+                mode, 
+                config,
                 (decodedText) => handleScanSuccess(decodedText),
-                (errorMessage) => { /* ignore error per frame */ }
+                () => {}
             );
             setScanStatus("active");
+
         } catch (err) {
-            console.error("Start Camera Error:", err);
-            setScanStatus("error");
-            setScanErrorMsg("ไม่สามารถเปิดกล้องได้ หรือกล้องถูกใช้งานอยู่");
+            console.warn("รอบแรกไม่ไหว กำลังลองรอบสอง...", err);
+            
+            // 🚑 รอบที่ 2 (Emergency): ขอแค่กล้องอะไรก็ได้ (Any Camera)
+            try {
+                await html5QrCode.start(
+                    { facingMode: "user" }, // ลองกล้องหน้าแทน (บางทีกล้องหลังค้าง แต่กล้องหน้าดี)
+                    config,
+                    (decodedText) => handleScanSuccess(decodedText),
+                    () => {}
+                );
+                setScanStatus("active");
+            } catch (err2) {
+                console.error("รอบสองก็พัง:", err2);
+                
+                // ☠️ รอบสุดท้าย: ยอมแพ้ แล้วบอกให้รีเฟรช
+                setScanStatus("error");
+                setScanErrorMsg("กล้องค้าง! กรุณากดปิดแท็บนี้ทิ้ง แล้วเข้าใหม่ (อย่าแค่รีเฟรช)");
+            }
         }
     };
 
