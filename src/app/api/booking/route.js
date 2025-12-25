@@ -228,91 +228,187 @@ const supabase = createClient(
 //     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 // );
 
+// export async function POST(request) {
+//     try {
+//         const body = await request.json();
+//         const { name, phone, date, slot_id, slotLabel, lineUserId, line_picture_url, line_display_name } = body;
+
+//         // -----------------------------------------------------------------------
+//         // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
+//         // -----------------------------------------------------------------------
+
+//         // สร้างเงื่อนไขค้นหา: เช็คเบอร์โทร หรือ Line ID (ถ้ามี)
+//         let query = supabase.from('bookings')
+//             .select('booking_date, slot_label, booking_code')
+//             .eq('status', 'BOOKED'); // 👈 หัวใจสำคัญ: หาเฉพาะรายการที่ "ยังไม่เช็คอิน"
+
+//         // ถ้ามี Line ID ให้เช็คทั้งเบอร์ และ Line ID (เผื่อเปลี่ยนเบอร์แต่ใช้ไลน์เดิม)
+//         if (lineUserId && lineUserId !== 'NO_LIFF') {
+//             query = query.or(`phone.eq.${phone},line_user_id.eq.${lineUserId}`);
+//         } else {
+//             // ถ้าไม่มี Line ID เช็คแค่เบอร์
+//             query = query.eq('phone', phone);
+//         }
+
+//         const { data: pendingBooking } = await query.maybeSingle();
+//         // ถ้าเจอว่ามีคิวค้างอยู่ (ยังไม่ได้ Check-in และยังไม่ Cancel)
+//         // ในส่วนที่เช็ค pendingBooking ใน API
+//         if (pendingBooking) {
+//             const d = new Date(pendingBooking.booking_date);
+//             const thaiDate = `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`;
+
+//             const htmlMessage = `
+//     <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
+//         <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
+//             🚫 <b>ทำรายการไม่สำเร็จ</b>
+//         </p>
+//         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+//         <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>ท่านมีรายการจองอยู่แล้ว :</b></p>
+//         <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
+//             <p>• ${thaiDate}</p>
+//             <p>• รอบ ${pendingBooking.slot_label}</p>
+//         </div>
+
+//         <div style="margin-top: 10px; text-align: center;">
+//             <a href="/ticket?code=${pendingBooking.booking_code || pendingBooking.code}" 
+//                style="display: inline-block; padding: 6px 15px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
+//                🎟️ ดูรายละเอียด / ยกเลิก
+//             </a>
+//         </div>
+
+//         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+//         <p style="color: #6b7280; font-size: 11px; text-align: center;">
+//             💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
+//         </p>
+//     </div>
+// `;
+
+//             return NextResponse.json({
+//                 ok: false,
+//                 message: htmlMessage // ส่ง HTML นี้ไปแทน
+//             }, { status: 400 });
+//         }
+
+//         // -----------------------------------------------------------------------
+//         // ส่วนที่ 2: ตรวจสอบซ้ำ และเต็ม (เหมือนเดิม)
+//         // -----------------------------------------------------------------------
+
+//         // 2. เช็คเต็ม (เหมือนเดิม)
+//         const { data: slotData } = await supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
+//         const capacity = slotData?.capacity || 0;
+
+//         const { count } = await supabase.from('bookings').select('*', { count: 'exact', head: true })
+//             .eq('booking_date', date)
+//             .eq('slot_id', slot_id)
+//             .neq('status', 'CANCELLED');
+
+//         if (count >= capacity) {
+//             return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
+//         }
+
+//         // 3. บันทึก (เหมือนเดิม)
+//         const phoneClean = phone.replace(/[^0-9]/g, "");
+//         const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+//         const newBookingCode = `${phoneClean}-${randomSuffix}`;
+
+//         const { error } = await supabase.from('bookings').insert([{
+//             customer_name: name,
+//             booking_date: date,
+//             phone: phone,
+//             slot_id: slot_id,
+//             slot_label: slotLabel,
+//             booking_code: newBookingCode,
+//             line_user_id: lineUserId || 'NO_LIFF',
+//             status: 'BOOKED',
+//             line_picture_url: line_picture_url || 'No line picture',
+//             line_display_name: line_display_name || 'No line name'
+//         }]);
+
+//         if (error) throw error;
+
+//         // ✅ ส่ง LINE ยืนยันการจอง
+//         if (lineUserId && lineUserId !== 'NO_LIFF') {
+//             try {
+//                 const flexMessage = lineClient.createBookingFlex({
+//                     code: newBookingCode,
+//                     name: name,
+//                     date: date,
+//                     slot: slotLabel
+//                 });
+//                 await lineClient.push(lineUserId, flexMessage);
+//                 console.log("✅ Sent LINE confirmation to:", lineUserId);
+//             } catch (lineErr) {
+//                 console.error("⚠️ Failed to send LINE:", lineErr);
+//                 // ไม่ throw error เดี๋ยวหน้าเว็บพัง ให้แค่ log warning
+//             }
+//         }
+
+//         return NextResponse.json({ ok: true, bookingCode: newBookingCode });
+
+//     } catch (error) {
+//         console.error("Booking Error:", error);
+//         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+//     }
+// }
+
+// version เก่า เช็คแค่เบอ
 export async function POST(request) {
     try {
         const body = await request.json();
         const { name, phone, date, slot_id, slotLabel, lineUserId, line_picture_url, line_display_name } = body;
 
         // -----------------------------------------------------------------------
-        // 🔥 แก้ไขส่วนที่ 1: กฎ "ต้องเช็คอินก่อน ถึงจองใหม่ได้"
+        // 🔥 แก้ไขส่วนที่ 1: เปลี่ยนเงื่อนไขการเช็คจองซ้ำ
         // -----------------------------------------------------------------------
+        // เป้าหมาย: อนุญาตให้ Line เดียวจองให้เพื่อนได้ (Line ID ซ้ำได้) 
+        // แต่ห้ามเบอร์เดิม จองรอบเดิม ซ้ำ (Phone + Date + Slot ต้องไม่ซ้ำ)
 
-        // สร้างเงื่อนไขค้นหา: เช็คเบอร์โทร หรือ Line ID (ถ้ามี)
-        let query = supabase.from('bookings')
-            .select('booking_date, slot_label, booking_code')
-            .eq('status', 'BOOKED'); // 👈 หัวใจสำคัญ: หาเฉพาะรายการที่ "ยังไม่เช็คอิน"
+        const { data: duplicateBooking } = await supabase
+            .from('bookings')
+            .select('booking_date, slot_label, booking_code, status')
+            .eq('phone', phone)             // 1. เช็คเบอร์โทรนี้
+            .eq('booking_date', date)       // 2. ในวันที่นี้
+            .eq('slot_id', slot_id)         // 3. รอบเวลานี้ (ถ้าจะห้ามจองวันเดียวกันคนละรอบ ให้ลบบรรทัดนี้ออก)
+            .neq('status', 'CANCELLED')     // 4. สถานะต้องไม่ใช่ยกเลิก (ถ้า BOOKED หรือ CHECKED_IN ถือว่าซ้ำ)
+            .maybeSingle();
 
-        // ถ้ามี Line ID ให้เช็คทั้งเบอร์ และ Line ID (เผื่อเปลี่ยนเบอร์แต่ใช้ไลน์เดิม)
-        if (lineUserId && lineUserId !== 'NO_LIFF') {
-            query = query.or(`phone.eq.${phone},line_user_id.eq.${lineUserId}`);
-        } else {
-            // ถ้าไม่มี Line ID เช็คแค่เบอร์
-            query = query.eq('phone', phone);
-        }
-
-        const { data: pendingBooking } = await query.maybeSingle();
-        // ถ้าเจอว่ามีคิวค้างอยู่ (ยังไม่ได้ Check-in และยังไม่ Cancel)
-        // ในส่วนที่เช็ค pendingBooking ใน API
-        if (pendingBooking) {
-            const d = new Date(pendingBooking.booking_date);
+        // ถ้าเจอว่าเบอร์นี้ จองรอบนี้ไปแล้ว
+        if (duplicateBooking) {
+            const d = new Date(duplicateBooking.booking_date);
             const thaiDate = `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`;
 
-            // ✅ ใช้ HTML แทน String ธรรมดาเพื่อให้จัดระเบียบได้
-            //             const htmlMessage = `
-            //     <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
-            //         <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
-            //             🚫 <b>ทำรายการไม่สำเร็จ</b>
-            //         </p>
-            //         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
-            //         <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>ท่านมีรายการจองอยู่แล้ว :</b></p>
-            //         <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
-            //             <p>• ${thaiDate}</p>
-            //             <p>• รอบ ${pendingBooking.slot_label}</p>
-            //         </div>
-            //         <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
-            //         <p style="color: #6b7280; font-size: 11px; text-align: center;">
-            //             💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
-            //         </p>
-            //     </div>
-            // `;
-
             const htmlMessage = `
-    <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
-        <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
-            🚫 <b>ทำรายการไม่สำเร็จ</b>
-        </p>
-        <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
-        <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>ท่านมีรายการจองอยู่แล้ว :</b></p>
-        <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
-            <p>• ${thaiDate}</p>
-            <p>• รอบ ${pendingBooking.slot_label}</p>
-        </div>
-        
-        <div style="margin-top: 10px; text-align: center;">
-            <a href="/ticket?code=${pendingBooking.booking_code || pendingBooking.code}" 
-               style="display: inline-block; padding: 6px 15px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
-               🎟️ ดูรายละเอียด / ยกเลิก
-            </a>
-        </div>
-
-        <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
-        <p style="color: #6b7280; font-size: 11px; text-align: center;">
-            💡 กรุณาใช้บริการคิวเดิมให้เรียบร้อยก่อนค่ะ หรือ ยกเลิกการจอง
-        </p>
-    </div>
-`;
+            <div style="text-align: left; font-size: 13px; line-height: 1.4; color: #374151;">
+                <p style="text-align: center; font-size: 14px; margin-bottom: 5px; color: #991b1b;">
+                    🚫 <b>ทำรายการซ้ำ</b>
+                </p>
+                <hr style="border: 0; border-top: 1px dashed #fca5a5; margin: 6px 0; opacity: 0.5;">
+                <p style="margin-bottom: 2px; font-size: 12px;">📌 <b>เบอร์โทรนี้มีการจองรอบนี้ไว้แล้ว :</b></p>
+                <div style="margin-left: 10px; color: #4b5563; font-size: 12px;">
+                    <p>• ${thaiDate}</p>
+                    <p>• รอบ ${duplicateBooking.slot_label}</p>
+                    <p>• สถานะ: ${duplicateBooking.status === 'CHECKED_IN' ? 'รับบริการแล้ว' : 'รอรับบริการ'}</p>
+                </div>
+                
+                <div style="margin-top: 10px; text-align: center;">
+                    <a href="/ticket?code=${duplicateBooking.booking_code}" 
+                       style="display: inline-block; padding: 6px 15px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
+                        🎟️ ดูรายละเอียด
+                    </a>
+                </div>
+            </div>
+            `;
 
             return NextResponse.json({
                 ok: false,
-                message: htmlMessage // ส่ง HTML นี้ไปแทน
+                message: htmlMessage
             }, { status: 400 });
         }
 
         // -----------------------------------------------------------------------
-        // ส่วนที่ 2: ตรวจสอบซ้ำ และเต็ม (เหมือนเดิม)
+        // ส่วนที่ 2: ตรวจสอบที่นั่งว่าง (เหมือนเดิม)
         // -----------------------------------------------------------------------
 
-        // 2. เช็คเต็ม (เหมือนเดิม)
         const { data: slotData } = await supabase.from('slots').select('capacity').eq('start_time', slot_id).single();
         const capacity = slotData?.capacity || 0;
 
@@ -325,7 +421,9 @@ export async function POST(request) {
             return NextResponse.json({ ok: false, message: "รอบเวลานี้เต็มแล้ว (Slot Full)" }, { status: 400 });
         }
 
-        // 3. บันทึก (เหมือนเดิม)
+        // -----------------------------------------------------------------------
+        // ส่วนที่ 3: บันทึกข้อมูล (เหมือนเดิม)
+        // -----------------------------------------------------------------------
         const phoneClean = phone.replace(/[^0-9]/g, "");
         const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
         const newBookingCode = `${phoneClean}-${randomSuffix}`;
@@ -337,7 +435,7 @@ export async function POST(request) {
             slot_id: slot_id,
             slot_label: slotLabel,
             booking_code: newBookingCode,
-            line_user_id: lineUserId || 'NO_LIFF',
+            line_user_id: lineUserId || 'NO_LIFF', // ยังบันทึก Line ID ของคนจองไว้ (เพื่อให้แจ้งเตือนเข้าไลน์คนจองได้)
             status: 'BOOKED',
             line_picture_url: line_picture_url || 'No line picture',
             line_display_name: line_display_name || 'No line name'
@@ -345,12 +443,13 @@ export async function POST(request) {
 
         if (error) throw error;
 
-        // ✅ ส่ง LINE ยืนยันการจอง
+        // ✅ ส่ง LINE ยืนยันการจอง (เข้าไลน์คนทำรายการจอง)
         if (lineUserId && lineUserId !== 'NO_LIFF') {
             try {
+                // แจ้งเตือนว่าจองให้ใคร
                 const flexMessage = lineClient.createBookingFlex({
                     code: newBookingCode,
-                    name: name,
+                    name: name, // ชื่อเพื่อนที่ถูกจองให้
                     date: date,
                     slot: slotLabel
                 });
@@ -358,7 +457,6 @@ export async function POST(request) {
                 console.log("✅ Sent LINE confirmation to:", lineUserId);
             } catch (lineErr) {
                 console.error("⚠️ Failed to send LINE:", lineErr);
-                // ไม่ throw error เดี๋ยวหน้าเว็บพัง ให้แค่ log warning
             }
         }
 
