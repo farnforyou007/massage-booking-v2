@@ -11,7 +11,7 @@ services:
       - "3000:3000"
     # อ่านค่าจากไฟล์ .env (แนะนำวิธีนี้)
     env_file:
-      - .env
+      - .env.local
     # หรือจะกำหนดค่าตรงๆ ก็ได้ (ไม่แนะนำถ้าเป็นความลับ)
     # environment:
     #   - NEXT_PUBLIC_SUPABASE_URL=...
