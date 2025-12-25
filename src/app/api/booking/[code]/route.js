@@ -53,7 +53,7 @@ export async function GET(request, { params }) {
                 date: data.booking_date,
                 slot: data.slot_label,
                 status: data.status,
-                line_user_id: data.line_user_id ,
+                line_user_id: data.line_user_id,
                 line_picture_url: data.line_picture_url
             }
         });
@@ -64,46 +64,100 @@ export async function GET(request, { params }) {
     }
 }
 
-// 2. POST: อัปเดตสถานะ (แก้จุดที่พัง)
+// // 2. POST: อัปเดตสถานะ (แก้จุดที่พัง)
+// export async function POST(request, { params }) {
+//     try {
+//         // 🔥 ย้ายเข้ามาใน try เพื่อกัน Error
+//         // 🔥 ใส่ await params เพื่อรองรับ Next.js รุ่นใหม่ล่าสุด
+//         const resolvedParams = await params; 
+//         const code = resolvedParams.code.toUpperCase(); 
+
+//         console.log("🔥 กำลังอัปเดต:", code);
+
+//         const body = await request.json();
+//         const { status } = body;
+
+//         // สั่งอัปเดตลง Supabase
+//         const { data, error } = await supabase
+//             .from('bookings')
+//             .update({ status: status }) 
+//             .eq('booking_code', code) 
+//             .select();
+
+//         if (error) throw error;
+
+//         // เช็คว่าเจอไหม
+//         if (!data || data.length === 0) {
+//             console.error("❌ หา Booking ไม่เจอใน DB:", code);
+//             return NextResponse.json({ 
+//                 ok: false, 
+//                 message: `ไม่พบรหัส ${code} ในระบบ (ตรวจสอบความถูกต้องของรหัส)` 
+//             }, { status: 404 });
+//         }
+
+//         return NextResponse.json({ 
+//             ok: true, 
+//             message: "อัปเดตสถานะเรียบร้อย",
+//             data: data 
+//         });
+
+//     } catch (error) {
+//         console.error("Update Error:", error);
+//         // ส่ง Error กลับไปเป็น JSON เสมอ (หน้าเว็บจะได้ไม่พัง)
+//         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+//     }
+// }
+
+// POST: อัปเดตสถานะ + บันทึกเวลาเช็คอิน
 export async function POST(request, { params }) {
     try {
-        // 🔥 ย้ายเข้ามาใน try เพื่อกัน Error
-        // 🔥 ใส่ await params เพื่อรองรับ Next.js รุ่นใหม่ล่าสุด
-        const resolvedParams = await params; 
-        const code = resolvedParams.code.toUpperCase(); 
+        const resolvedParams = await params;
+        const code = resolvedParams.code.toUpperCase();
 
         console.log("🔥 กำลังอัปเดต:", code);
 
         const body = await request.json();
         const { status } = body;
 
-        // สั่งอัปเดตลง Supabase
+        // ✅ 1. เตรียมข้อมูลที่จะอัปเดต (สร้าง Object รอไว้ก่อน)
+        const updatePayload = { status: status };
+
+        // ✅ 2. ตรวจสอบสถานะเพื่อจัดการเวลา (Timestamp)
+        if (status === 'CHECKED_IN') {
+            // ถ้าเช็คอิน -> บันทึกเวลาปัจจุบัน (Format ISO มาตรฐานโลก)
+            // หมายเหตุ: Supabase จะเก็บเป็น UTC, เวลาดึงมาโชว์หน้าเว็บค่อยแปลงเป็นเวลาไทย
+            updatePayload.checked_in_at = new Date().toISOString();
+        }
+        else if (status === 'BOOKED') {
+            // ถ้าย้อนกลับสถานะเป็นจอง (Undo) -> เคลียร์เวลาเช็คอินทิ้ง
+            updatePayload.checked_in_at = null;
+        }
+
+        // ✅ 3. สั่งอัปเดตลง Supabase (ส่ง updatePayload ที่เตรียมไว้)
         const { data, error } = await supabase
             .from('bookings')
-            .update({ status: status }) 
-            .eq('booking_code', code) 
+            .update(updatePayload)
+            .eq('booking_code', code)
             .select();
 
         if (error) throw error;
 
-        // เช็คว่าเจอไหม
         if (!data || data.length === 0) {
             console.error("❌ หา Booking ไม่เจอใน DB:", code);
-            return NextResponse.json({ 
-                ok: false, 
-                message: `ไม่พบรหัส ${code} ในระบบ (ตรวจสอบความถูกต้องของรหัส)` 
+            return NextResponse.json({
+                ok: false,
+                message: `ไม่พบรหัส ${code} ในระบบ (ตรวจสอบความถูกต้องของรหัส)`
             }, { status: 404 });
         }
 
-        return NextResponse.json({ 
-            ok: true, 
-            message: "อัปเดตสถานะเรียบร้อย",
-            data: data 
+        return NextResponse.json({
+            ok: true,
+            message: "อัปเดตสถานะและเวลาเรียบร้อย",
+            data: data
         });
 
     } catch (error) {
         console.error("Update Error:", error);
-        // ส่ง Error กลับไปเป็น JSON เสมอ (หน้าเว็บจะได้ไม่พัง)
         return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
     }
 }

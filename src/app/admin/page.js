@@ -1009,7 +1009,7 @@ export default function AdminPage() {
                     fps: 20, // 🚀 ยังคงความไวไว้ที่ 20 เฟรม/วิ (สแกนไว)
                     qrbox: { width: 250, height: 250 }, // กรอบเล็ง
                     aspectRatio: 1.0,
-                    disableFlip: false 
+                    disableFlip: false
                 },
                 (decodedText) => {
                     // เมื่อสแกนเจอ
@@ -1036,7 +1036,7 @@ export default function AdminPage() {
     //         setScanStatus("idle");
     //     }
     // };
-    
+
 
 
 
@@ -1413,11 +1413,6 @@ export default function AdminPage() {
                 if (b.status === 'BOOKED') {
                     const updateRes = await adminUpdateBookingStatus(bookingCode, "CHECKED_IN", authToken);
 
-                    // --- ส่วนคำนวณเวลา (แก้ไข Error split) ---
-                    const currentHour = new Date().getHours();
-                    // ✅ ใช้ slotLabel ที่มีค่าแน่นอน แทน b.slot_label ที่อาจเป็น null
-                    const bookingHour = parseInt(slotLabel.split(':')[0]) || 0;
-
                     // --- ส่วนคำนวณเวลา (แบบละเอียด: นับนาที) ---
                     let timeStatus = "";
                     try {
@@ -1465,7 +1460,7 @@ export default function AdminPage() {
                                     <img src="${b.line_picture_url || '/user.png'}" 
                                          style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
                                     <div class="text-xl font-bold text-emerald-700">คุณ ${customerName}</div>
-                                    <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus}</div>
+                                    <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus} นาที</div>
                                     <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
                                 </div>
                             `,
@@ -2603,7 +2598,7 @@ export default function AdminPage() {
         );
     };
 
-  
+
 
     return (
         <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
@@ -2875,7 +2870,7 @@ export default function AdminPage() {
                                                         <div className="flex items-center">เบอร์โทร {getSortIcon('phone')}</div>
                                                     </th>
                                                     <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 select-none" onClick={() => handleSort('status')}>
-                                                        <div className="flex items-center">สถานะ {getSortIcon('status')}</div>
+                                                        <div className="flex items-center justify-center gap-1">สถานะ {getSortIcon('status')}</div>
                                                     </th>
                                                     <th className="px-4 py-3 text-right">จัดการ</th>
                                                 </tr>
@@ -2920,7 +2915,22 @@ export default function AdminPage() {
                                                                         <button onClick={() => handleCopy(b.phone, "เบอร์โทร")} className="text-gray-300 hover:text-blue-500 transition-colors"><FiCopy size={12} /></button>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-3">{renderStatusBadge(b.status)}</td>
+                                                                <td className="px-4 py-3">
+                                                                    {/* {renderStatusBadge(b.status)} */}
+                                                                    <div className="flex flex-col items-center justify-center gap-1">
+                                                                        {renderStatusBadge(b.status)}
+
+                                                                    {/* </div>
+                                                                    <div className="flex items-center gap-1.5 mt-0.5"> */}
+
+                                                                        {/* 🔥 ถ้ามีเวลาเช็คอิน ให้แสดงเวลาด้วย */}
+                                                                        {b.status === 'CHECKED_IN' && b.checked_in_at && (
+                                                                            <span className="text-[10px] text-gray-400 font-mono">
+                                                                                ถึง: {new Date(b.checked_in_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
 
                                                                 <td className="px-4 py-3 text-right">
                                                                     {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2"> */}
