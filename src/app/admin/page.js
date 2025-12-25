@@ -463,6 +463,7 @@ export default function AdminPage() {
             reloadData('skeleton'); // โชว์โครงกระดูก
             isFirstLoad.current = false;
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authToken]);
 
     // ✅ 2. เปลี่ยนวัน / โหมด / หน้า -> โหลดเงียบๆ (Background) เร็วทันใจ!
@@ -471,7 +472,16 @@ export default function AdminPage() {
             // ใช้โหมด 'none' หน้าจอจะไม่กระพริบ ไม่จาง ข้อมูลจะดีดเปลี่ยนเองเมื่อเสร็จ
             reloadData('none');
         }
-    }, [date, viewMode, currentPage]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode, currentPage]);
+
+     useEffect(() => {
+        if (authToken && !isFirstLoad.current) {
+            // ใช้โหมด 'none' หน้าจอจะไม่กระพริบ ไม่จาง ข้อมูลจะดีดเปลี่ยนเองเมื่อเสร็จ
+            reloadData('skeleton'); // เพิ่มโหลดแบบ skeleton
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date]);
 
     // ✅ 3. ค้นหา / เรียงลำดับ -> โหลดจางๆ (Dimmed) ให้รู้ว่ากำลังหา
     useEffect(() => {
@@ -482,8 +492,8 @@ export default function AdminPage() {
 
             return () => clearTimeout(delaySearch);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm, sortConfig]);
-
     const loadDates = () => {
         getManageDates()
             .then(res => { if (res.items) setManageDates(res.items); })
