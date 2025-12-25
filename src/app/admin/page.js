@@ -1487,7 +1487,7 @@ export default function AdminPage() {
                         // speakThai(`คุณ ${customerName} ยืนยันสำเร็จ`);
                         await Swal.fire({
                             icon: 'success',
-                            title: 'ยืนยันสำเร็จ!',
+                            title: 'ตรวจสอบเรียบร้อย!',
                             html: `
                                 <div class="flex flex-col items-center">
                                     <img src="${b.line_picture_url || '/user.png'}" 
@@ -1509,14 +1509,18 @@ export default function AdminPage() {
                     }
 
                 } else if (b.status === 'CHECKED_IN') {
-                    
+                    const audio = new Audio('/checkin.mp3');
+                        audio.play().catch(() => { });
                     await Swal.fire({ icon: 'info', title: 'เช็คอินไปแล้ว', html: `คุณ <b>${customerName}</b><br/>ลงทะเบียนเรียบร้อยแล้วครับ`, timer: 2000, showConfirmButton: false });
                 } else {
-                    
+                    const audio = new Audio('/cancle.mp3');
+                        audio.play().catch(() => { });
 
                     await Swal.fire({ icon: 'warning', title: 'รายการถูกยกเลิก', text: `สถานะ: ${b.status}`, timer: 3000, showConfirmButton: false });
                 }
             } else {
+                const audio = new Audio('/nobooking.mp3');
+                        audio.play().catch(() => { });
                 await Swal.fire({ icon: 'error', title: 'ไม่พบรหัสจองนี้', text: finalCode, timer: 1500, showConfirmButton: false });
             }
 
