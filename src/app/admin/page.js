@@ -1156,13 +1156,8 @@ export default function AdminPage() {
                     }
                     // --------------------------------
                     // --------------------------------
-
                     if (updateRes.ok) {
-
-
                         // เช็คว่ามีฟังก์ชัน speakThai หรือยัง (ถ้าไม่มีให้ก๊อปจากข้างล่างไปใส่)
-
-
                         const audio = new Audio('/welcome.mp3');
                         audio.play().catch(() => { });
 
@@ -1175,21 +1170,18 @@ export default function AdminPage() {
                                     <img src="${b.line_picture_url || '/user.png'}" 
                                          style="width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border: 3px solid #10B981;">
                                     <div class="text-xl font-bold text-emerald-700">คุณ ${customerName} </div>
+                                    <div class="text-lg text-gray-500 mt-1">${slotLabel}</div>
                                     <div class="text-sm font-bold text-gray-700 mt-2"> ${timeStatus} นาที</div>
-                                    <div class="text-sm text-gray-500 mt-1">${slotLabel}</div>
                                 </div>
                             `,
                             timer: 3000,
                             showConfirmButton: false,
                             backdrop: `rgba(0,0,0,0.5)`
                         });
-
                         await reloadData('none');
-
                     } else {
                         await Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'บันทึกสถานะไม่สำเร็จ' });
                     }
-
                 } else if (b.status === 'CHECKED_IN') {
                     const audio = new Audio('/checkin.mp3');
                     audio.play().catch(() => { });
@@ -1197,7 +1189,6 @@ export default function AdminPage() {
                 } else {
                     const audio = new Audio('/cancle.mp3');
                     audio.play().catch(() => { });
-
                     await Swal.fire({ icon: 'warning', title: 'รายการถูกยกเลิก', text: `สถานะ: ${b.status}`, timer: 3000, showConfirmButton: false });
                 }
             } else {
@@ -1205,7 +1196,6 @@ export default function AdminPage() {
                 audio.play().catch(() => { });
                 await Swal.fire({ icon: 'error', title: 'ไม่พบรหัสจองนี้', text: finalCode, timer: 1500, showConfirmButton: false });
             }
-
         } catch (err) {
             console.error(err);
         } finally {
@@ -1254,7 +1244,6 @@ export default function AdminPage() {
     // 2. สั่งเปิด/ปิดกล้อง ตามตัวแปร cameraEnabled และ activeTab
     useEffect(() => {
         let mounted = true;
-
         // ถ้าเงื่อนไขครบ (อยู่หน้า Scan + เปิดกล้อง + ยังไม่ได้ข้อมูล) -> เริ่มสแกน
         if (activeTab === "scan" && !scanData && cameraEnabled && selectedDeviceId) {
             // หน่วงเวลาเล็กน้อยเพื่อให้ <div id="reader"> วาดเสร็จก่อน
